@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="theme-color" content="#0e7c6b">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<title>Dokan Hisab – Shop Manager (self-hosted)</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧾</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<style>
+/* ---------- Design tokens (light + dark) ---------- */
+:root{--bg:#eef1f4;--sf:#fff;--ink:#14202b;--mut:#5d6b78;--bd:#d9dfe5;--ac:#0e7c6b;--acx:#fff;--ok:#0e7c6b;--bad:#b3261e;--soft:#e4f2ef;
+ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10171d;--sf:#18222a;--ink:#e8eef3;--mut:#9aa8b4;--bd:#2b3945;--ac:#35b9a4;--acx:#06201b;--ok:#4cc9b0;--bad:#ff8a80;--soft:#1b3430;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#10171d;--sf:#18222a;--ink:#e8eef3;--mut:#9aa8b4;--bd:#2b3945;--ac:#35b9a4;--acx:#06201b;--ok:#4cc9b0;--bad:#ff8a80;--soft:#1b3430;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{background:var(--bg);color:var(--ink);font-family:'Hind Siliguri',system-ui,sans-serif;margin:0}
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:14px}
+.inp{width:100%;background:var(--bg);color:var(--ink);border:1px solid var(--bd);border-radius:8px;padding:8px 10px;font:inherit;margin-top:4px}
+.inp:focus,.btn:focus-visible,.btn2:focus-visible,.nv:focus-visible{outline:2px solid var(--ac);outline-offset:1px}
+.btn{background:var(--ac);color:var(--acx);border:0;border-radius:8px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+.btn2{background:transparent;color:var(--ink);border:1px solid var(--bd);border-radius:8px;padding:8px 12px;font:inherit;cursor:pointer}
+.btn.sm,.btn2.sm{padding:3px 9px;font-size:13px}
+.danger{color:var(--bad)}
+.mut{color:var(--mut)} .pos{color:var(--ok)} .neg{color:var(--bad)}
+.lbl{display:block;font-size:13px;color:var(--mut)}
+.nv{flex-shrink:0;background:none;border:0;color:var(--mut);font:inherit;padding:8px 7px;cursor:pointer;border-radius:8px;white-space:nowrap}
+.nv.on{background:var(--soft);color:var(--ac);font-weight:600}
+.pi{position:relative;width:100%;aspect-ratio:4/3;border-radius:8px;background:var(--soft);color:var(--ac);display:flex;align-items:center;justify-content:center;font-size:30px;font-weight:700;overflow:hidden}
+.pi img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.row{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--bd)}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:50;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow:auto}
+#modal.hidden{display:none}
+.mb{background:var(--sf);border-radius:14px;padding:16px;width:100%;max-width:460px;margin:auto}
+#receipt{background:#fff;color:#000;margin:auto;padding:12px;font-family:'Hind Siliguri',monospace;border:1px solid #ccc}
+#receipt.th{width:302px;font-size:12px} #receipt.a4{width:100%;max-width:720px;font-size:14px}
+#receipt .row{border-color:#999}
+#receipt table{width:100%;border-collapse:collapse}#receipt td,#receipt th{padding:3px 2px;border-bottom:1px dashed #999;text-align:right}#receipt td:first-child,#receipt th:first-child{text-align:left}
+@media print{
+ #app{display:none!important}
+ #modal{position:static!important;background:none!important;padding:0!important;display:block!important}
+ .mb{max-width:none!important;padding:0!important;background:none!important}
+ .noprint{display:none!important} #receipt{border:0}
+}
+/* ---------- Auth ---------- */
+.av{width:32px;height:32px;border-radius:50%;background:var(--ac);color:var(--acx);display:flex;align-items:center;justify-content:center;font-weight:700;flex-shrink:0}
+#auth{position:fixed;inset:0;z-index:60;background:var(--bg);overflow:auto;padding:16px;display:flex}
+#auth.hidden{display:none}
+#auth *{box-sizing:border-box}
+#auth .text-center{text-align:center}
+#auth .w-full{width:100%}
+#a_otp{display:flex;gap:8px;justify-content:center;flex-wrap:nowrap}
+.ab{width:100%;max-width:400px;margin:auto}
+.seg{display:flex;background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:none;color:var(--mut);font:inherit;padding:7px 4px;border-radius:8px;cursor:pointer;font-weight:600}
+.seg button.on{background:var(--sf);color:var(--ac);box-shadow:0 1px 3px rgba(0,0,0,.18)}
+.gbtn{width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#1f1f1f;border:1px solid #dadce0;border-radius:10px;padding:12px 14px;font:inherit;font-weight:600;font-size:16px;cursor:pointer}
+.gbtn:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+.divl{display:flex;align-items:center;gap:10px;color:var(--mut);font-size:13px;margin:14px 0}
+.divl:before,.divl:after{content:"";flex:1;height:1px;background:var(--bd)}
+.pwr{position:relative}
+.pwt{position:absolute;right:6px;top:calc(50% + 2px);transform:translateY(-50%);background:none;border:0;color:var(--ac);font:inherit;font-size:13px;font-weight:600;cursor:pointer;padding:4px 6px}
+.otpb{flex:1;min-width:0;max-width:52px;height:54px;text-align:center;font:inherit;font-size:22px;font-weight:700;background:var(--bg);color:var(--ink);border:1px solid var(--bd);border-radius:10px;padding:0}
+.otpb:focus{outline:2px solid var(--ac);border-color:var(--ac)}
+.otpb.bad{border-color:var(--bad)}
+.aerr{color:var(--bad);font-size:13px;min-height:20px;margin-top:8px}
+@media print{#auth{display:none!important}}
+/* ---------- Stock, toast, wholesale ---------- */
+.bdg{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:99px;background:var(--soft);color:var(--mut);white-space:nowrap}
+.bdg.ok{background:var(--soft);color:var(--ac)}
+.bdg.low{background:#f5b301;color:#2a2000}
+.bdg.out{background:var(--bad);color:var(--sf)}
+.card.lowc{border-color:#f5b301;box-shadow:0 0 0 1px #f5b301 inset}
+.card.outc{border-color:var(--bad);box-shadow:0 0 0 1px var(--bad) inset}
+.btn2.on{background:var(--bad);color:var(--sf);border-color:var(--bad)}
+#toasts{position:fixed;top:calc(env(safe-area-inset-top,0px) + 10px);left:0;right:0;z-index:70;display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;padding:0 12px}
+.toast{pointer-events:auto;width:100%;max-width:440px;background:var(--sf);color:var(--ink);border:1px solid var(--bd);border-left:6px solid var(--ac);border-radius:10px;padding:10px 12px;box-shadow:0 6px 22px rgba(0,0,0,.28);font-size:14px;cursor:pointer}
+.toast.warn{border-left-color:#f5b301}
+.toast.bad{border-left-color:var(--bad)}
+@media print{#toasts{display:none!important}}
+</style>
+</head>
+<body>
+<div id="app" class="min-h-screen pb-24 md:pb-6" style="display:none">
+  <header class="sticky top-0 z-20" style="background:var(--sf);border-bottom:1px solid var(--bd)">
+    <div class="max-w-6xl mx-auto px-3 py-2 flex items-center gap-3">
+      <div class="flex-1 min-w-0 leading-tight"><div class="font-bold text-lg truncate" id="shopTitle"></div><div class="text-xs mut truncate" id="shopSub"></div></div>
+      <nav class="hidden md:flex gap-1" id="navTop"></nav>
+      <button class="btn2 sm" onclick="shopForm()">Shop info</button>
+      <div id="userBox" class="hidden min-w-0">
+        <div class="flex items-center gap-2">
+          <div id="uAv" class="av" aria-hidden="true"></div>
+          <div class="leading-tight min-w-0 hidden sm:block" style="max-width:130px"><div id="uName" class="text-sm font-semibold truncate"></div><div id="uSub" class="text-xs mut truncate"></div></div>
+          <button class="btn2 sm danger" style="border-color:var(--bad);font-weight:700" onclick="logout()" title="Log out">⎋ Logout</button>
+        </div>
+      </div>
+    </div>
+  </header>
+  <main id="main" class="max-w-6xl mx-auto p-3 md:p-5"></main>
+  <nav class="md:hidden fixed bottom-0 inset-x-0 flex overflow-x-auto" id="navBot" style="background:var(--sf);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom,0px)"></nav>
+</div>
+<div id="modal" class="hidden"></div>
+<div id="toasts" aria-live="polite"></div>
+<div id="auth" class="hidden" aria-live="polite"></div>
+
+<script>
+/* =========================================================
+   Dokan Hisab – single-file shop manager
+   State is saved in localStorage (wrapped in try/catch).
+   ========================================================= */
+const $=s=>document.querySelector(s);
+const E=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const M=n=>'৳'+(+n||0).toLocaleString('en-IN',{maximumFractionDigits:2});
+const pad=n=>String(n).padStart(2,'0');
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())};
+const sum=(a,f)=>a.reduce((s,x)=>s+f(x),0);
+const inM=(a,m)=>a.filter(x=>x.date.startsWith(m));
+const cogs=s=>sum(s.items,i=>i.c*i.q);               // purchase cost of items sold
+const KEY='dokan.hisab.v1';
+const EC=[['Electricity','বিদ্যুৎ বিল'],['Internet','নেট বিল'],['Rent','দোকান ভাড়া'],['Salary','কর্মচারী বেতন'],['Misc','বিবিধ খরচ']];
+const TABS=[['dash','Dashboard','ড্যাশবোর্ড'],['pos','POS','বিক্রয়'],['ws','Wholesale','পাইকারি'],['prod','Products','পণ্য'],['bills','Find bill','বিল খুঁজুন'],['exp','Expenses','খরচ'],['led','Ledger','আয়-ব্যয়'],['gem','🍌 Gemini','জেমিনি']];
+
+const blank=()=>({shop:{name:'My Shop',addr:'',phone:'',low:5},products:[],sales:[],expenses:[],seq:1,wseq:1});
+let S=blank(),DBK=null,curUid=null;
+let tab='dash',mon=today().slice(0,7),cart=[],disc={t:'flat',v:0},pq='',pc='',tmpImg='';
+
+/* ---------- persistence ---------- */
+function loadUser(u){   // every account has its own shop database: KEY + '.u.' + user id
+  DBK=KEY+'.u.'+u.id;curUid=u.id;let d=null;
+  try{const r=localStorage.getItem(DBK);if(r)d=JSON.parse(r)}catch(e){}
+  if(!d&&!A.legacyClaimed&&(u.v!==2||u.first)){   // data from before accounts existed goes to the first/pre-existing account only
+    try{const r=localStorage.getItem(KEY);if(r){d=JSON.parse(r);A.legacyClaimed=u.id;aSave()}}catch(e){}
+  }
+  S=Object.assign(blank(),d||{});
+  S.shop=Object.assign({low:5},S.shop);
+  if(!d){S.shop.name=u.shop||'My Shop';S.shop.phone=u.phone||''}   // brand-new shop: no products, no sales
+  tab='dash';cart=[];disc={t:'flat',v:0};pq='';pc='';bq='';plow=false;bt='';lowShown=false;wcart=[];wd={t:'flat',v:0};wtr=0;wpaid=null;wb={n:'',p:'',a:''};
+  save();
+}
+function save(){if(!DBK)return;try{localStorage.setItem(DBK,JSON.stringify(S))}catch(e){}}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,5);
+
+/* ---------- shell ---------- */
+function nav(){
+  const h=TABS.map(t=>`<button class="nv ${tab===t[0]?'on':''}" onclick="go('${t[0]}')">${t[1]}<br class="md:hidden"><span class="text-xs md:ml-1 mut"> ${t[2]}</span></button>`).join('');
+  $('#navTop').innerHTML=h;$('#navBot').innerHTML=h;
+}
+function go(t){tab=t;render()}
+function render(){
+  if(!gate())return;   // not signed in → login screen
+  const u=me();
+  $('#shopTitle').textContent=S.shop.name||'My Shop';$('#shopSub').textContent=S.shop.phone||u.phone||u.email||'';
+  nav();
+  $('#main').innerHTML=({dash:vDash,pos:vPos,ws:vWs,prod:vProd,bills:vBills,exp:vExp,led:vLed,gem:vGem})[tab]();
+  if(tab==='pos'){gridPos();cartUI()} if(tab==='ws'){gridWs();wcartUI()} if(tab==='prod')listProd(); if(tab==='bills')listBills(); if(tab==='gem')gtPrev();
+  if(tab==='dash'&&!lowShown){lowShown=true;lowSummary()}
+}
+function modal(h){const m=$('#modal');m.innerHTML='<div class="mb">'+h+'</div>';m.classList.remove('hidden')}
+function closeM(){const m=$('#modal');m.classList.add('hidden');m.innerHTML='';const p=$('#pgsz');if(p)p.textContent=''}
+const stat=(l,b,v,c='')=>`<div class="card"><div class="mut text-sm">${l} <span class="text-xs">${b}</span></div><div class="text-2xl font-bold ${c}">${M(v)}</div></div>`;
+const cls=v=>v>=0?'pos':'neg';
+
+/* ---------- 1. Dashboard ---------- */
+function vDash(){
+  const m=today().slice(0,7),s=inM(S.sales,m),e=inM(S.expenses,m);
+  const rev=sum(s,x=>x.total),cg=sum(s,cogs),ex=sum(e,x=>x.amt),net=rev-cg-ex;
+  const td=S.sales.filter(x=>x.date===today()),tr=sum(td,x=>x.total);
+  // last 6 months bars
+  const ms=[];for(let i=5;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);ms.push(d.getFullYear()+'-'+pad(d.getMonth()+1))}
+  const data=ms.map(k=>({k,r:sum(inM(S.sales,k),x=>x.total),x:sum(inM(S.expenses,k),y=>y.amt)+sum(inM(S.sales,k),cogs)}));
+  const mx=Math.max(1,...data.map(d=>Math.max(d.r,d.x)));
+  return dashTop()+`<div class="flex flex-wrap items-center gap-2 mb-3"><h2 class="text-xl font-bold flex-1">This month <span class="mut text-base">এই মাসের সারসংক্ষেপ</span></h2><button class="btn" onclick="dayRep()">Today’s summary · আজকের হিসাব</button></div>
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+   ${stat('Total sales','মোট বিক্রয়',rev)}${stat('Total expenses','মোট খরচ',ex)}
+   ${stat('Cost of goods','পণ্যের ক্রয়মূল্য',cg)}${stat('Net profit','নিট লাভ',net,cls(net))}
+  </div>
+  <h3 class="font-bold mt-5 mb-2">Today <span class="mut text-sm">আজকের হিসাব</span></h3>
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+   ${stat('Sales today','আজকের বিক্রয়',tr)}
+   <div class="card"><div class="mut text-sm">Bills today <span class="text-xs">বিল সংখ্যা</span></div><div class="text-2xl font-bold">${td.length}</div></div>
+   ${stat('Profit today','আজকের লাভ',tr-sum(td,cogs),cls(tr-sum(td,cogs)))}
+   ${stat('Expenses today','আজকের খরচ',sum(S.expenses.filter(x=>x.date===today()),x=>x.amt))}
+  </div>
+  <div class="grid lg:grid-cols-2 gap-3 mt-5">
+   <div class="card"><h3 class="font-bold mb-3">Sales vs. all costs, 6 months</h3>
+    <div class="flex items-end gap-2" style="height:150px">${data.map(d=>`<div class="flex-1 flex flex-col items-center justify-end h-full gap-1" title="${d.k}">
+      <div class="flex items-end gap-1 w-full justify-center flex-1"><div style="width:40%;height:${d.r/mx*100}%;background:var(--ac);border-radius:4px 4px 0 0"></div><div style="width:40%;height:${d.x/mx*100}%;background:var(--bad);opacity:.7;border-radius:4px 4px 0 0"></div></div>
+      <div class="text-xs mut">${d.k.slice(5)}</div></div>`).join('')}</div>
+    <div class="text-xs mut mt-2">Green: sales · Red: purchase cost + expenses</div></div>
+   <div class="card"><h3 class="font-bold mb-2">Recent bills <span class="mut text-sm">সাম্প্রতিক বিল</span></h3>
+    ${S.sales.length?S.sales.slice(-6).reverse().map(x=>`<div class="row"><span>${x.no} · ${E(x.customer||'Walk-in')}<span class="mut text-xs"> ${x.date}</span></span><b>${M(x.total)}</b></div>`).join(''):'<p class="mut">No sales yet. Open POS to make the first bill.</p>'}</div>
+  </div>`;
+}
+
+/* ---------- 2. Products ---------- */
+const cats=()=>[...new Set(S.products.map(p=>p.cat).filter(Boolean))];
+function vProd(){
+  return `<div class="flex flex-wrap gap-2 mb-3 items-center">
+   <h2 class="text-xl font-bold flex-1">Products <span class="mut text-base">পণ্য তালিকা</span></h2>
+   <input class="inp" style="width:180px;margin:0" placeholder="Search…" value="${E(pq)}" oninput="pq=this.value;listProd()">
+   <select class="inp" style="width:150px;margin:0" onchange="pc=this.value;listProd()"><option value="">All categories</option>${cats().map(c=>`<option ${pc===c?'selected':''}>${E(c)}</option>`).join('')}</select>
+   <button class="btn2 ${plow?'on':''}" onclick="plow=!plow;render()">⚠ Low stock (${lowList().length})</button>
+   <button class="btn" onclick="pForm()">+ Add product</button></div>
+   <div id="plist" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3"></div>`;
+}
+const ph=p=>`<div class="pi">${E((p.name||'?')[0].toUpperCase())}${p.img?`<img src="${E(p.img)}" alt="" onerror="this.remove()">`:''}</div>`;
+function listProd(){
+  const l=S.products.filter(p=>p.name.toLowerCase().includes(pq.toLowerCase())&&(!pc||p.cat===pc)&&(!plow||sst(p)==='low'||sst(p)==='out'));
+  $('#plist').innerHTML=l.length?l.map(p=>{const pr=p.sell-p.buy,mg=p.buy?pr/p.buy*100:0,k=sst(p);return `<div class="card ${k==='out'?'outc':k==='low'?'lowc':''}">${ph(p)}
+   <div class="mt-2">${stBadge(p)}</div>
+   <div class="font-semibold mt-1 truncate">${E(p.name)}</div><div class="mut text-xs">${E(p.cat||'Uncategorised')}</div>
+   <div class="text-sm mt-1">Buy ${M(p.buy)} · Sell <b>${M(p.sell)}</b></div>
+   <div class="text-sm">Wholesale <b>${p.ws>0?M(p.ws):'—'}</b></div>
+   <div class="text-sm ${cls(pr)}">Profit ${M(pr)} (${mg.toFixed(1)}%)</div>
+   <div class="flex gap-2 mt-2 flex-wrap"><button class="btn2 sm" onclick="pForm('${p.id}')">Edit</button><button class="btn2 sm" onclick="restock('${p.id}')">+ Stock</button><button class="btn2 sm" onclick="studio('${p.id}')">Studio</button><button class="btn2 sm danger" onclick="pDel('${p.id}')">Delete</button></div></div>`}).join(''):`<p class="mut col-span-full">${plow?'No low-stock products. 👍':'No products yet. Add one with the button above.'}</p>`;
+}
+function pForm(id){
+  const p=S.products.find(x=>x.id===id)||{name:'',cat:'',img:'',buy:'',sell:'',ws:'',stock:''};tmpImg=p.img||'';
+  modal(`<h3 class="font-bold text-lg mb-2">${id?'Edit product':'Add product'} <span class="mut text-sm">পণ্য</span></h3>
+  <label class="lbl">Product name (পণ্যের নাম)<input id="f_n" class="inp" value="${E(p.name)}"></label>
+  <label class="lbl mt-2">Category (ক্যাটাগরি)<input id="f_c" class="inp" list="cl" value="${E(p.cat)}"></label><datalist id="cl">${cats().map(c=>`<option value="${E(c)}">`).join('')}</datalist>
+  <label class="lbl mt-2">Image URL (optional)<input id="f_i" class="inp" placeholder="https://…" value="${E(p.img&&!p.img.startsWith('data:')?p.img:'')}" oninput="tmpImg=this.value"></label>
+  <label class="lbl mt-2">…or upload an image<input type="file" accept="image/*" class="inp" onchange="upImg(this.files[0])"></label>
+  <div class="grid grid-cols-2 gap-3 mt-2">
+   <label class="lbl">Purchase price (ক্রয় মূল্য)<input id="f_b" type="number" min="0" step="any" class="inp" value="${p.buy}" oninput="pm()"></label>
+   <label class="lbl">Selling price (বিক্রয় মূল্য)<input id="f_s" type="number" min="0" step="any" class="inp" value="${p.sell}" oninput="pm()"></label>
+   <label class="lbl">Wholesale price (পাইকারি মূল্য)<input id="f_w" type="number" min="0" step="any" class="inp" placeholder="optional" value="${p.ws>0?p.ws:''}" oninput="pm()"></label>
+   <label class="lbl">Stock quantity (স্টক পরিমাণ)<input id="f_k" type="number" min="0" step="any" class="inp" placeholder="blank = don't track" value="${tracked(p)?p.stock:''}"></label></div>
+  <div id="f_m" class="mt-2 text-sm"></div><div id="f_e" class="neg text-sm"></div>
+  <div class="flex gap-2 mt-3"><button class="btn" onclick="pSave('${id||''}')">Save product</button><button class="btn2" onclick="closeM()">Cancel</button></div>`);pm();
+}
+function pm(){
+  const b=+$('#f_b').value||0,s=+$('#f_s').value||0,w=+$('#f_w').value||0,g=(x)=>`<b class="${cls(x-b)}">${M(x-b)} (${b?((x-b)/b*100).toFixed(1):0}%)</b>`;
+  $('#f_m').innerHTML=`Retail margin: ${g(s)}`+(w?`<br>Wholesale margin: ${g(w)}`:'');
+}
+function upImg(f){ // resize to a small data-URL so localStorage stays light
+  if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const c=document.createElement('canvas'),k=Math.min(1,240/Math.max(im.width,im.height));c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);tmpImg=c.toDataURL('image/jpeg',.7);$('#f_i').value=''};im.src=r.result};r.readAsDataURL(f);
+}
+function pSave(id){
+  const n=$('#f_n').value.trim(),b=+$('#f_b').value,s=+$('#f_s').value,w=$('#f_w').value.trim(),k=$('#f_k').value.trim();
+  if(!n||!(b>=0)||!(s>0)){$('#f_e').textContent='Enter a name and a selling price above zero.';return}
+  if(w!==''&&!(+w>0)){$('#f_e').textContent='Wholesale price must be above zero (or leave it empty).';return}
+  if(k!==''&&!(+k>=0)){$('#f_e').textContent='Stock quantity cannot be negative.';return}
+  const o={name:n,cat:$('#f_c').value.trim(),img:tmpImg.trim(),buy:b,sell:s,ws:w===''?0:+w,stock:k===''?null:+k};
+  let p;if(id){p=S.products.find(x=>x.id===id);Object.assign(p,o)}else{p={id:uid(),...o};S.products.push(p)}
+  save();closeM();render();if(sst(p)==='low'||sst(p)==='out')toast(stockMsg(p),sst(p)==='out'?'bad':'warn','স্টক কম');
+}
+function pDel(id){if(confirm('Delete this product? Past bills keep their records.')){S.products=S.products.filter(p=>p.id!==id);cart=cart.filter(c=>c.id!==id);wcart=wcart.filter(c=>c.id!==id);save();render()}}
+
+/* ---------- 3. POS & billing ---------- */
+function vPos(){
+  return `<div class="grid lg:grid-cols-5 gap-4">
+  <section class="lg:col-span-3">
+   <div class="flex gap-2 mb-3"><input class="inp" style="margin:0" placeholder="Search product (পণ্য খুঁজুন)…" oninput="pq=this.value;gridPos()" value="${E(pq)}">
+   <select class="inp" style="margin:0;width:150px" onchange="pc=this.value;gridPos()"><option value="">All</option>${cats().map(c=>`<option ${pc===c?'selected':''}>${E(c)}</option>`).join('')}</select></div>
+   <div id="pgrid" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div></section>
+  <section class="lg:col-span-2"><div class="card lg:sticky lg:top-16">
+   <h3 class="font-bold mb-2">Current bill <span class="mut text-sm">বর্তমান বিল</span></h3>
+   <div id="cartItems"></div>
+   <div class="grid grid-cols-3 gap-2 mt-3">
+    <label class="lbl">Discount (ছাড়)<select class="inp" onchange="disc.t=this.value;totals()"><option value="flat" ${disc.t==='flat'?'selected':''}>Flat ৳</option><option value="pct" ${disc.t==='pct'?'selected':''}>Percent %</option></select></label>
+    <label class="lbl col-span-2">Amount<input type="number" min="0" step="any" class="inp" value="${disc.v||''}" oninput="disc.v=+this.value||0;totals()"></label></div>
+   <div class="grid grid-cols-2 gap-2 mt-2">
+    <label class="lbl">Customer (ক্রেতা)<input id="c_n" class="inp" placeholder="Walk-in"></label>
+    <label class="lbl">Phone (মোবাইল)<input id="c_p" class="inp" inputmode="tel"></label></div>
+   <div id="totals" class="mt-3"></div>
+   <div class="flex gap-2 mt-3"><button class="btn flex-1" onclick="checkout()">Complete &amp; print</button><button class="btn2" onclick="cart=[];cartUI()">Clear</button></div>
+  </div></section></div>`;
+}
+function gridPos(){
+  const l=S.products.filter(p=>p.name.toLowerCase().includes(pq.toLowerCase())&&(!pc||p.cat===pc));
+  $('#pgrid').innerHTML=l.length?l.map(p=>{const k=sst(p);return `<button class="card text-left cursor-pointer ${k==='out'?'outc':k==='low'?'lowc':''}" style="${k==='out'?'opacity:.65':''}" onclick="add('${p.id}')">${ph(p)}<div class="font-semibold mt-1 truncate">${E(p.name)}</div>
+   <div class="flex items-center justify-between gap-1 flex-wrap"><span class="pos font-bold">${M(p.sell)}</span>${tracked(p)?`<span class="bdg ${k}">${k==='out'?'Out':p.stock}</span>`:''}</div></button>`}).join(''):'<p class="mut col-span-full">No products. Add some in Products first.</p>';
+}
+function add(id){const p=prodOf(id),c=cart.find(x=>x.id===id);if(!canSell(p,(c?c.q:0)+1))return;c?c.q++:cart.push({id,q:1});cartUI()}
+function qty(id,d){const c=cart.find(x=>x.id===id),p=prodOf(id);if(d>0&&!canSell(p,c.q+d))return;c.q+=d;if(c.q<=0)cart=cart.filter(x=>x.id!==id);cartUI()}
+function setQ(id,v){const c=cart.find(x=>x.id===id),p=prodOf(id);let q=Math.max(1,+v||1);if(!canSell(p,q))q=Math.max(1,p.stock);c.q=q;cartUI()}
+function cartUI(){
+  $('#cartItems').innerHTML=cart.length?cart.map(c=>{const p=S.products.find(x=>x.id===c.id);return `<div class="row items-center"><div class="flex-1 min-w-0"><div class="truncate">${E(p.name)}</div><div class="mut text-xs">${M(p.sell)} each${tracked(p)?' · '+p.stock+' in stock':''}</div></div>
+   <div class="flex items-center gap-1"><button class="btn2 sm" onclick="qty('${c.id}',-1)">−</button><input type="number" min="1" class="inp" style="width:52px;margin:0;text-align:center;padding:3px" value="${c.q}" onchange="setQ('${c.id}',this.value)"><button class="btn2 sm" onclick="qty('${c.id}',1)">+</button></div></div>`}).join(''):'<p class="mut">Tap a product to add it to the bill.</p>';
+  totals();
+}
+function calc(){
+  const sub=sum(cart,c=>S.products.find(p=>p.id===c.id).sell*c.q);
+  let d=disc.t==='pct'?sub*Math.min(disc.v,100)/100:Math.min(disc.v,sub);
+  return {sub,d,total:sub-d};
+}
+function totals(){const t=calc();$('#totals').innerHTML=`<div class="row"><span>Subtotal (মোট)</span><span>${M(t.sub)}</span></div><div class="row"><span>Discount (ছাড়)</span><span>− ${M(t.d)}</span></div><div class="row text-lg font-bold"><span>Total payable (সর্বমোট)</span><span>${M(t.total)}</span></div>`}
+function checkout(){
+  if(!cart.length){alert('Add at least one product first.');return}
+  if(!checkStock(cart))return;
+  const t=calc(),s={id:uid(),no:'INV-'+String(S.seq++).padStart(4,'0'),date:today(),time:new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}),
+   customer:$('#c_n').value.trim(),phone:$('#c_p').value.trim(),disc:t.d,sub:t.sub,total:t.total,
+   items:cart.map(c=>{const p=prodOf(c.id);return {id:p.id,n:p.name,p:p.sell,c:p.buy,q:c.q}})};
+  S.sales.push(s);const w=deduct(s.items);save();cart=[];disc={t:'flat',v:0};render();receipt(s.id);warnLow(w);
+}
+function receipt(id){ // printable bill: thermal (80mm) or A4
+  {const w=S.sales.find(x=>x.id===id);if(w&&w.type==='ws')return wsReceipt(id)}
+  const s=S.sales.find(x=>x.id===id),sh=S.shop;
+  modal(`<div class="noprint flex gap-2 mb-3 flex-wrap items-center"><button class="btn" onclick="window.print()">Print receipt (রিসিপ্ট প্রিন্ট)</button>
+   <select class="inp" style="width:auto;margin:0" onchange="$('#receipt').className=this.value"><option value="th">Thermal 80mm</option><option value="a4">A4 / standard</option></select><button class="btn2" onclick="closeM()">Close</button><button class="btn2 danger" onclick="sDel('${s.id}')">Cancel this sale</button></div>
+  <div id="receipt" class="th">
+   <div style="text-align:center"><b style="font-size:1.3em">${E(sh.name)}</b><br>${E(sh.addr)}<br>${sh.phone?'Tel: '+E(sh.phone):''}</div>
+   <hr style="margin:6px 0;border-color:#000">
+   <div class="row"><span><b>Txn ID: ${s.no}</b></span><span>${s.date} ${s.time||''}</span></div>
+   <div>Customer: ${E(s.customer||'Walk-in')} ${s.phone?'· '+E(s.phone):''}</div>
+   <hr style="margin:6px 0;border-color:#000">
+   ${s.items.map(i=>`<div class="row"><span>${E(i.n)}<br><small>${i.q} × ${M(i.p)}</small></span><span>${M(i.q*i.p)}</span></div>`).join('')}
+   <div class="row"><span>Subtotal</span><span>${M(s.sub)}</span></div>
+   <div class="row"><span>Discount</span><span>− ${M(s.disc)}</span></div>
+   <div class="row" style="font-size:1.2em"><b>Total payable</b><b>${M(s.total)}</b></div>
+   <p style="text-align:center;margin-top:10px">Thank you! ধন্যবাদ, আবার আসবেন।</p></div>
+  <div class="noprint mt-3"><div class="font-semibold mb-1">Download item receipts <span class="mut text-sm">পণ্য অনুযায়ী আলাদা রসিদ</span></div>
+   ${s.items.map((i,k)=>`<div class="row items-center"><span>${E(i.n)} × ${i.q}</span><button class="btn2 sm" onclick="dlItem('${s.id}',${k})">Download</button></div>`).join('')}
+   <button class="btn mt-2" onclick="dlAll('${s.id}')">Download all as ZIP</button></div>`);
+}
+
+/* ---------- Reports, cash memos and downloads ---------- */
+const net=(s,i)=>s.sub>0?i.p*i.q*s.total/s.sub:0;   // line value after its share of the bill discount
+function agg(sales){const m={};sales.forEach(s=>s.items.forEach(i=>{const a=m[i.n]||(m[i.n]={n:i.n,q:0,rev:0,cost:0});a.q+=i.q;a.rev+=net(s,i);a.cost+=i.c*i.q}));return Object.values(m).sort((a,b)=>b.rev-a.rev)}
+const prodTable=a=>a.length?`<table><tr><th>Product</th><th>Qty</th><th>Sales</th><th>Profit</th></tr>${a.map(x=>`<tr><td>${E(x.n)}</td><td>${x.q}</td><td>${M(x.rev)}</td><td>${M(x.rev-x.cost)}</td></tr>`).join('')}</table>`:'<p>No products sold.</p>';
+const shopHead=()=>`<div style="text-align:center"><b style="font-size:1.3em">${E(S.shop.name)}</b><br>${E(S.shop.addr)}<br>${S.shop.phone?'Tel: '+E(S.shop.phone):''}</div><hr style="margin:6px 0;border-color:#000">`;
+const MEMO_CSS="body{font-family:'Hind Siliguri',system-ui,sans-serif;color:#000;background:#fff;margin:0;padding:16px}#receipt{max-width:720px;margin:auto;font-size:14px}.row{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed #999}table{width:100%;border-collapse:collapse}td,th{padding:4px 2px;border-bottom:1px dashed #999;text-align:right}td:first-child,th:first-child{text-align:left}";
+const FMT_CSS={th:'#receipt{width:302px;max-width:none;font-size:12px}@page{size:80mm auto;margin:3mm}',a4:'@page{size:A4;margin:12mm}'};
+const docHtml=(t,inner,f)=>`<!DOCTYPE html><html lang="bn"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${E(t)}</title><style>${MEMO_CSS}${FMT_CSS[f]||''}</style></head><body><div id="receipt">${inner}</div></body></html>`;
+const slug=t=>t.replace(/[^\p{L}\p{N}]+/gu,'-').replace(/^-|-$/g,'').slice(0,40)||'item';
+
+// Save a file: uses the viewer's save prompt when published, or a normal download when opened locally.
+async function saveFile(name,data){
+  let d=null;try{d=window.claude&&claude.use?await claude.use('downloads'):null}catch(e){}
+  if(d){try{await d.save({filename:name,data})}catch(x){if(!x||x.code!=='declined')alert('Could not save the file. Use Print and choose Save as PDF instead.')}return}
+  const u=URL.createObjectURL(data instanceof Blob?data:new Blob([data],{type:'text/html'})),a=document.createElement('a');
+  a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),2000);
+}
+let repFile='',repTitle='';
+function showRep(title,file,ctl,body){
+  repFile=file;repTitle=title;
+  modal(`<div class="noprint flex gap-2 mb-3 flex-wrap items-center">${ctl}<button class="btn" onclick="window.print()">Print</button><button class="btn" onclick="dlRep()">Download</button>
+   <select class="inp" style="width:auto;margin:0" onchange="$('#receipt').className=this.value"><option value="a4">A4 / standard</option><option value="th">Thermal 80mm</option></select><button class="btn2" onclick="closeM()">Close</button></div>
+   <div id="receipt" class="a4">${body}</div>`);
+}
+function dlRep(){saveFile(repFile,docHtml(repTitle,$('#receipt').innerHTML))}
+
+// Daily summary / cash memo: items sold, total sales, profit, and every product name
+function dayRep(d){
+  d=d||today();
+  const ss=S.sales.filter(x=>x.date===d),items=sum(ss,s=>sum(s.items,i=>i.q)),rev=sum(ss,x=>x.total),cg=sum(ss,cogs);
+  showRep('Daily cash memo '+d,'cash-memo-'+d+'.html',`<input type="date" class="inp" style="width:auto;margin:0" value="${d}" onchange="dayRep(this.value||today())">`,
+  `${shopHead()}<div style="text-align:center"><b>DAILY CASH MEMO · দৈনিক ক্যাশ মেমো</b><br>${d}</div><hr style="margin:6px 0;border-color:#000">
+   <div class="row"><span>Bills (বিল সংখ্যা)</span><span>${ss.length}</span></div>
+   <div class="row"><span>Total items sold (মোট পণ্য)</span><span>${items}</span></div>
+   <div class="row"><b>Total sales after discounts (মোট বিক্রয়)</b><b>${M(rev)}</b></div>
+   <div class="row"><span>of which wholesale (পাইকারি) · ${ss.filter(x=>x.type==='ws').length} bills</span><span>${M(sum(ss.filter(x=>x.type==='ws'),x=>x.total))}</span></div>
+   <div class="row"><span>Purchase cost of items sold</span><span>${M(cg)}</span></div>
+   <div class="row"><b>Total profit (মোট লাভ)</b><b>${M(rev-cg)}</b></div>
+   <p style="margin:10px 0 2px"><b>Products sold (বিক্রিত পণ্য)</b></p>${prodTable(agg(ss))}
+   <p style="margin-top:8px"><b>Transaction IDs:</b> ${ss.map(s=>s.no).join(', ')||'–'}</p>`);
+}
+
+// Monthly income and expense report, including every product sold that month
+function monRep(m){
+  m=m||mon;
+  const s=inM(S.sales,m),e=inM(S.expenses,m),rev=sum(s,x=>x.total),cg=sum(s,cogs),ex=sum(e,x=>x.amt),g={};
+  e.forEach(x=>g[x.cat]=(g[x.cat]||0)+x.amt);
+  showRep('Monthly report '+m,'monthly-report-'+m+'.html',`<input type="month" class="inp" style="width:auto;margin:0" value="${m}" onchange="monRep(this.value||mon)">`,
+  `${shopHead()}<div style="text-align:center"><b>MONTHLY INCOME &amp; EXPENSE REPORT<br>মাসিক আয়-ব্যয় রিপোর্ট</b><br>${m}</div><hr style="margin:6px 0;border-color:#000">
+   <div class="row"><span>Bills / items sold</span><span>${s.length} / ${sum(s,x=>sum(x.items,i=>i.q))}</span></div>
+   <div class="row"><b>Income – sales (বিক্রয় আয়)</b><b>${M(rev)}</b></div>
+   <div class="row"><span>− Purchase cost of goods sold</span><span>${M(cg)}</span></div>
+   <div class="row"><b>Gross profit (মোট লাভ)</b><b>${M(rev-cg)}</b></div>
+   ${Object.entries(g).map(([k,v])=>`<div class="row"><span>− ${E(k)}</span><span>${M(v)}</span></div>`).join('')}
+   <div class="row"><span>− Total expenses (মোট খরচ)</span><span>${M(ex)}</span></div>
+   <div class="row" style="font-size:1.2em"><b>NET PROFIT (নিট লাভ)</b><b>${M(rev-cg-ex)}</b></div>
+   <p style="margin:10px 0 2px"><b>Products sold (বিক্রিত পণ্য)</b></p>${prodTable(agg(s))}`);
+}
+
+// Separate receipt for each product line of a sale
+function itemDoc(s,k){
+  const i=s.items[k],g=i.p*i.q,n=net(s,i);
+  return docHtml(s.no+' item '+(k+1),`${shopHead()}<div class="row"><span><b>Txn ID: ${s.no}</b> · Item ${k+1}/${s.items.length}</span><span>${s.date} ${s.time||''}</span></div>
+   <div>Customer: ${E(s.customer||'Walk-in')} ${s.phone?'· '+E(s.phone):''}</div><hr style="margin:6px 0;border-color:#000">
+   <div class="row"><span>${E(i.n)}<br><small>${i.q} × ${M(i.p)}</small></span><span>${M(g)}</span></div>
+   <div class="row"><span>Share of bill discount</span><span>− ${M(g-n)}</span></div>
+   <div class="row" style="font-size:1.2em"><b>Payable</b><b>${M(n)}</b></div>
+   <p style="text-align:center;margin-top:10px">Thank you! ধন্যবাদ।</p>`);
+}
+const itemName=(s,k)=>'receipt-'+s.no+'-'+(k+1)+'-'+slug(s.items[k].n)+'.html';
+function dlItem(id,k){const s=S.sales.find(x=>x.id===id);saveFile(itemName(s,k),itemDoc(s,k))}
+async function dlAll(id){
+  const s=S.sales.find(x=>x.id===id);
+  if(!window.JSZip){alert('ZIP is not available right now. Download the item receipts one by one.');return}
+  const z=new JSZip();s.items.forEach((i,k)=>z.file(itemName(s,k),itemDoc(s,k)));
+  saveFile('receipts-'+s.no+'.zip',await z.generateAsync({type:'blob'}));
+}
+
+/* ---------- Photo studio: professional backdrops, shadow and reflection around the product photo ---------- */
+let ST=null;
+const SCENES={white:'Clean white studio',gray:'Soft gray gradient',wood:'Warm wooden table',marble:'White marble counter',dark:'Dark premium spotlight',color:'Custom color backdrop'};
+const shade=(h,p)=>{const n=parseInt(h.slice(1),16),f=v=>Math.max(0,Math.min(255,Math.round(v+(p<0?v:255-v)*p)));return `rgb(${f(n>>16)},${f((n>>8)&255)},${f(n&255)})`};
+function studio(pid){
+  const p=S.products.find(x=>x.id===pid);ST={pid,src:null,cut:null};
+  modal(`<h3 class="font-bold text-lg mb-1">Photo studio <span class="mut text-sm">ছবি স্টুডিও</span></h3>
+  <p class="mut text-sm mb-2">${E(p.name)}: the product pixels are kept exactly as photographed. The backdrop, shadow and reflection are drawn around it.</p>
+  <div class="flex gap-2 flex-wrap items-center"><input type="file" accept="image/*" class="inp" style="flex:1;margin:0" onchange="stLoadFile(this.files[0])">${p.img&&p.img.startsWith('data:')?'<button class="btn2 sm" onclick="stUseSaved()">Use saved image</button>':''}</div>
+  <div class="mt-2" style="background:var(--bg);border-radius:10px;display:flex;align-items:center;justify-content:center"><canvas id="stCv" style="max-width:100%;height:auto;display:none;border-radius:8px"></canvas><span id="stHint" class="mut text-sm p-6">Choose the best, sharpest photo you have. A plain background works best.</span></div>
+  <div id="stInfo" class="text-xs mut mt-1"></div>
+  <div class="grid grid-cols-2 gap-3 mt-3">
+   <label class="lbl">Scene<select id="st_s" class="inp" onchange="stDraw()">${Object.entries(SCENES).map(([k,v])=>`<option value="${k}">${v}</option>`).join('')}</select></label>
+   <label class="lbl">Custom backdrop color<input id="st_c" type="color" class="inp" style="padding:2px;height:38px" value="#dfe7f2" oninput="stDraw()"></label>
+   <label class="lbl">Shape<select id="st_a" class="inp" onchange="stDraw()"><option value="1">Square 2048×2048</option><option value="0.8">Portrait 1638×2048</option><option value="1.7778">Wide 2048×1152</option></select></label>
+   <label class="lbl">Product size<input id="st_z" type="range" min="40" max="95" value="68" class="w-full" oninput="stDraw()"></label>
+   <label class="lbl"><input id="st_rm" type="checkbox" checked onchange="stCut()"> Remove old background</label>
+   <label class="lbl">Edge sensitivity<input id="st_t" type="range" min="8" max="90" value="38" class="w-full" onchange="stCut()"></label>
+   <label class="lbl"><input id="st_sh" type="checkbox" checked onchange="stDraw()"> Soft shadow</label>
+   <label class="lbl"><input id="st_rf" type="checkbox" onchange="stDraw()"> Glossy reflection</label></div>
+  <div id="stAI" class="mt-3 text-sm"></div>
+  <div id="stGem" class="card mt-3" style="display:none"><b>Generate with Gemini</b> <span class="mut text-xs">Your photo is sent as a reference, and the product should stay the same.</span>
+   <label class="lbl mt-2">Describe the new scene<textarea id="gm_p" class="inp" rows="3" placeholder="e.g. on a sunny kitchen counter, soft morning light"></textarea></label>
+   <div class="flex gap-2 mt-2 flex-wrap items-center"><button class="btn" id="gm_go" onclick="gemRun()">Generate</button><span class="mut text-xs">Takes 10 to 40 seconds. The Shape setting above is used.</span></div>
+   <div id="gm_out" class="mt-2"></div></div>
+  <div class="flex gap-2 flex-wrap mt-3"><button class="btn" onclick="stSave()">Download PNG</button><button class="btn2" onclick="stUse()">Use as product image</button><button class="btn" onclick="gemToggle()">🍌 Gemini</button><button id="stAIbtn" class="btn2 hidden" onclick="stAdvice()">✨ AI scene tip</button><button class="btn2" onclick="closeM()">Close</button></div>`);
+  $('.mb').style.maxWidth='720px';stAIinit();
+}
+function stLoadFile(f){if(!f)return;const r=new FileReader();r.onload=()=>stLoadUrl(r.result);r.readAsDataURL(f)}
+function stUseSaved(){stLoadUrl(S.products.find(x=>x.id===ST.pid).img)}
+function stLoadUrl(u){
+  const im=new Image();
+  im.onload=()=>{const k=Math.min(1,2048/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);ST.src=c;
+    $('#stInfo').textContent='Source photo: '+im.width+'×'+im.height+'px'+(Math.max(im.width,im.height)<1000?'. This is small, so the 2048px result will look softer. Use the original camera photo if you can.':'.');stCut()};
+  im.onerror=()=>alert('That image could not be opened.');im.src=u;
+}
+// Remove the old background by flood-filling from the edges (works best on plain backgrounds), then trim to the product
+function stCut(){
+  if(!ST||!ST.src)return;
+  const c=ST.src,w=c.width,h=c.height,id=c.getContext('2d').getImageData(0,0,w,h),d=id.data,tol=+$('#st_t').value;
+  if($('#st_rm').checked){
+    let r=0,g=0,b=0,n=0;const pt=(x,y)=>{const i=(y*w+x)*4;r+=d[i];g+=d[i+1];b+=d[i+2];n++};
+    for(let x=0;x<w;x++){pt(x,0);pt(x,h-1)}for(let y=1;y<h-1;y++){pt(0,y);pt(w-1,y)}
+    r/=n;g/=n;b/=n;
+    const bg=new Uint8Array(w*h),st=new Int32Array(w*h);let sp=0;
+    const push=i=>{if(bg[i])return;const j=i*4,dr=d[j]-r,dg=d[j+1]-g,db=d[j+2]-b;if(dr*dr+dg*dg+db*db<=tol*tol*3){bg[i]=1;st[sp++]=i}};
+    for(let x=0;x<w;x++){push(x);push((h-1)*w+x)}for(let y=0;y<h;y++){push(y*w);push(y*w+w-1)}
+    while(sp){const i=st[--sp],x=i%w;if(x>0)push(i-1);if(x<w-1)push(i+1);if(i>=w)push(i-w);if(i<w*h-w)push(i+w)}
+    const e=new Uint8Array(w*h);   // shrink the mask by 1px to avoid a halo, then soften the edge
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){const i=y*w+x;e[i]=!bg[i]&&(x==0||!bg[i-1])&&(x==w-1||!bg[i+1])&&(y==0||!bg[i-w])&&(y==h-1||!bg[i+w])?255:0}
+    for(let y=0;y<h;y++)for(let x=0;x<w;x++){let s=0,k=0;for(let dy=-1;dy<=1;dy++){const yy=y+dy;if(yy<0||yy>=h)continue;for(let dx=-1;dx<=1;dx++){const xx=x+dx;if(xx<0||xx>=w)continue;s+=e[yy*w+xx];k++}}d[(y*w+x)*4+3]=s/k}
+  }
+  let x0=w,y0=h,x1=-1,y1=-1;
+  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if(d[(y*w+x)*4+3]>24){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+  if(x1<0){alert('The whole photo was treated as background. Lower the edge sensitivity or untick Remove old background.');return}
+  const t=document.createElement('canvas');t.width=w;t.height=h;t.getContext('2d').putImageData(id,0,0);
+  const o=document.createElement('canvas');o.width=x1-x0+1;o.height=y1-y0+1;o.getContext('2d').drawImage(t,x0,y0,o.width,o.height,0,0,o.width,o.height);
+  ST.cut=o;$('#stHint').style.display='none';$('#stCv').style.display='block';stDraw();
+}
+function scene(x,sc,col,W,H,hz){
+  let s=42;const rnd=()=>(s=(s*16807)%2147483647)/2147483647;
+  const lg=(y0,y1,a,b)=>{const g=x.createLinearGradient(0,y0,0,y1);g.addColorStop(0,a);g.addColorStop(1,b);return g};
+  const rg=(a,b,r)=>{const g=x.createRadialGradient(W/2,H*.5,0,W/2,H*.5,r);g.addColorStop(0,a);g.addColorStop(1,b);return g};
+  if(sc==='white'){x.fillStyle=rg('#ffffff','#dfe4ea',W*.85);x.fillRect(0,0,W,H)}
+  else if(sc==='gray'){x.fillStyle=lg(0,H,'#eceff2','#a9b3bd');x.fillRect(0,0,W,H);x.fillStyle=rg('rgba(255,255,255,.55)','rgba(255,255,255,0)',W*.7);x.fillRect(0,0,W,H)}
+  else if(sc==='dark'){x.fillStyle='#0b0e13';x.fillRect(0,0,W,H);x.fillStyle=rg('#3b4655','rgba(11,14,19,0)',W*.8);x.fillRect(0,0,W,H);x.fillStyle=lg(hz,H,'rgba(255,255,255,.07)','rgba(255,255,255,0)');x.fillRect(0,hz,W,H-hz)}
+  else if(sc==='wood'){x.fillStyle=lg(0,hz,'#efe9df','#ddd3c3');x.fillRect(0,0,W,hz);x.fillStyle=lg(hz,H,'#c19262','#8a5e36');x.fillRect(0,hz,W,H-hz);
+    for(let i=0;i<220;i++){const y=hz+rnd()*(H-hz);x.strokeStyle='rgba(55,30,12,'+(.05+rnd()*.14)+')';x.lineWidth=1+rnd()*2.5;x.beginPath();x.moveTo(0,y);x.bezierCurveTo(W*.3,y+rnd()*8-4,W*.7,y+rnd()*8-4,W,y+rnd()*6-3);x.stroke()}}
+  else if(sc==='marble'){x.fillStyle=lg(0,hz,'#eceeef','#dde1e4');x.fillRect(0,0,W,hz);x.fillStyle=lg(hz,H,'#f6f6f4','#e3e4e2');x.fillRect(0,hz,W,H-hz);
+    for(let i=0;i<22;i++){let px=rnd()*W,py=hz+rnd()*(H-hz);x.strokeStyle='rgba(95,102,115,'+(.1+rnd()*.22)+')';x.lineWidth=1+rnd()*2.5;x.beginPath();x.moveTo(px,py);for(let k=0;k<14;k++){px+=(rnd()-.35)*W*.09;py+=(rnd()-.5)*H*.05;x.lineTo(px,py)}x.stroke()}}
+  else{x.fillStyle=lg(0,hz,shade(col,.12),col);x.fillRect(0,0,W,hz);x.fillStyle=lg(hz,H,shade(col,-.1),shade(col,-.25));x.fillRect(0,hz,W,H-hz)}
+}
+function stDraw(){
+  if(!ST||!ST.cut)return;
+  const k=+$('#st_a').value,W=k>=1?2048:Math.round(2048*k),H=k>=1?Math.round(2048/k):2048;
+  const cv=$('#stCv'),x=cv.getContext('2d');cv.width=W;cv.height=H;
+  const hz=H*.64,baseY=hz+H*.1,c=ST.cut,z=$('#st_z').value/100;
+  scene(x,$('#st_s').value,$('#st_c').value,W,H,hz);
+  const sc=Math.min(W*z/c.width,H*z*.85/c.height),pw=c.width*sc,ph=c.height*sc,px=(W-pw)/2,py=Math.max(H*.03,baseY-ph);
+  x.imageSmoothingQuality='high';
+  if($('#st_sh').checked){   // soft contact shadow
+    const rx=pw*.55,ry=Math.max(12,pw*.07);x.save();x.translate(W/2,baseY);x.scale(1,ry/rx);
+    const g=x.createRadialGradient(0,0,0,0,0,rx);g.addColorStop(0,'rgba(0,0,0,.5)');g.addColorStop(.6,'rgba(0,0,0,.2)');g.addColorStop(1,'rgba(0,0,0,0)');
+    x.fillStyle=g;x.beginPath();x.arc(0,0,rx,0,7);x.fill();x.restore();
+  }
+  if($('#st_rf').checked){   // faded mirror image under the product
+    const r=document.createElement('canvas');r.width=Math.round(pw);r.height=Math.round(ph);const q=r.getContext('2d');
+    q.translate(0,r.height);q.scale(1,-1);q.drawImage(c,0,0,r.width,r.height);q.setTransform(1,0,0,1,0,0);
+    q.globalCompositeOperation='destination-in';const g=q.createLinearGradient(0,0,0,r.height*.5);g.addColorStop(0,'rgba(0,0,0,.35)');g.addColorStop(1,'rgba(0,0,0,0)');q.fillStyle=g;q.fillRect(0,0,r.width,r.height);
+    x.drawImage(r,px,baseY);
+  }
+  x.drawImage(c,px,py,pw,ph);
+}
+function stSave(){
+  if(!ST||!ST.cut){alert('Choose a photo first.');return}
+  const p=S.products.find(x=>x.id===ST.pid);
+  $('#stCv').toBlob(b=>saveFile('studio-'+slug(p.name)+'-'+$('#st_s').value+'.png',b),'image/png');
+}
+function stUse(){  // keep a smaller copy on the product card (browser storage is limited)
+  if(!ST||!ST.cut){alert('Choose a photo first.');return}
+  const s=$('#stCv'),k=Math.min(1,640/Math.max(s.width,s.height)),c=document.createElement('canvas');c.width=Math.round(s.width*k);c.height=Math.round(s.height*k);
+  c.getContext('2d').drawImage(s,0,0,c.width,c.height);
+  S.products.find(x=>x.id===ST.pid).img=c.toDataURL('image/jpeg',.85);save();closeM();render();
+}
+// Optional: Claude looks at the photo and suggests a backdrop and a caption
+async function stAIinit(){
+  try{if(!window.claude||!claude.use)return;const sm=await claude.use('sample');if(!sm||!sm.limits)return;const l=await sm.limits();const b=$('#stAIbtn');if(l&&l.images&&b)b.classList.remove('hidden')}catch(e){}
+}
+async function stAdvice(){
+  if(!ST||!ST.src){alert('Choose a photo first.');return}
+  const box=$('#stAI');box.textContent='Thinking…';
+  try{
+    const sm=await claude.use('sample'),p=S.products.find(x=>x.id===ST.pid),c=document.createElement('canvas'),k=Math.min(1,1024/Math.max(ST.src.width,ST.src.height));
+    c.width=Math.round(ST.src.width*k);c.height=Math.round(ST.src.height*k);c.getContext('2d').drawImage(ST.src,0,0,c.width,c.height);
+    const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.85));
+    const r=await sm.json('You are a product photographer helping a small shop. The image is a photo of "'+p.name+'" (category: '+(p.cat||'general')+'). Choose the best backdrop for a clean, professional shop photo. Reply with JSON only: {"scene":"white|gray|wood|marble|dark|color","color":"#rrggbb backdrop color if scene is color, else null","reason":"one short sentence","caption":"one-line product caption in English","caption_bn":"the same caption in Bengali","tips":"one short tip for retaking the photo if it would help, else empty"}',{images:[blob],modelTier:'quick'});
+    if(SCENES[r.scene])$('#st_s').value=r.scene;
+    if(/^#[0-9a-f]{6}$/i.test(r.color||''))$('#st_c').value=r.color;
+    box.innerHTML=`<div class="card"><b>AI suggestion:</b> ${E(SCENES[r.scene]||'')}. ${E(r.reason)}<br><span class="mut">${E(r.caption)} · ${E(r.caption_bn)}</span>${r.tips?`<br><span class="mut">Tip: ${E(r.tips)}</span>`:''}</div>`;
+    stDraw();
+  }catch(e){box.textContent=e&&e.code==='not_granted'?'AI help was not allowed for this page.':'AI suggestion is not available right now.'}
+}
+
+/* ---------- Gemini (needs the self-hosted server: npm start) ---------- */
+const GEM_PROMPTS={white:'on a seamless white studio backdrop, soft box lighting, gentle contact shadow, e-commerce product photo',gray:'on a soft gray gradient studio backdrop, even lighting, subtle shadow, clean catalog photo',wood:'on a warm wooden table, natural side light, lifestyle product photo',marble:'on a white marble counter, soft dramatic spotlight, premium advertising look',dark:'on a dark reflective surface with a soft spotlight, premium luxury product photo',color:'on a clean seamless colored studio backdrop, soft lighting, gentle shadow'};
+// In the phone/desktop wrapper apps, set this to your server address, e.g. 'https://shop.example.com'. Leave empty when the page is opened from the server itself.
+const API_BASE='';
+const gemHint=s=>s===404?'The Gemini server was not found (404). Run npm start, then open http://localhost:3000/shop.html (not the claude.ai link and not the file itself).':'The server answered with an error ('+s+'). Look at the terminal where npm start is running.';
+const GEM_RATIO={'1':'1:1','0.8':'4:5','1.7778':'16:9'};
+let gemImg='';
+function gemToggle(){const p=$('#stGem'),open=p.style.display==='none';p.style.display=open?'block':'none';if(open&&!$('#gm_p').value)$('#gm_p').value=GEM_PROMPTS[$('#st_s').value]||''}
+async function gemRun(){
+  if(!ST||!ST.src){alert('Choose a photo first.');return}
+  const prompt=$('#gm_p').value.trim(),out=$('#gm_out'),btn=$('#gm_go');
+  if(prompt.length<3){alert('Describe the scene first.');return}
+  const k=Math.min(1,1536/Math.max(ST.src.width,ST.src.height)),c=document.createElement('canvas');   // keep the upload small
+  c.width=Math.round(ST.src.width*k);c.height=Math.round(ST.src.height*k);c.getContext('2d').drawImage(ST.src,0,0,c.width,c.height);
+  btn.disabled=true;out.textContent='Generating\u2026';
+  try{
+    const r=await fetch(API_BASE+'/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,aspectRatio:GEM_RATIO[$('#st_a').value]||'1:1',image:c.toDataURL('image/jpeg',.9)})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(d.error||gemHint(r.status));
+    gemImg=d.image;
+    out.innerHTML=`<img src="${gemImg}" alt="Gemini result" style="max-width:100%;border-radius:8px"><div class="flex gap-2 mt-2 flex-wrap"><button class="btn sm" onclick="gemSave()">Download PNG</button><button class="btn2 sm" onclick="gemUse()">Use as product image</button></div><p class="mut text-xs mt-1">AI-generated. Check labels, text and colors against the real product before using it.</p>`;
+  }catch(e){out.innerHTML='<span class="neg"></span>';out.firstChild.textContent=(e instanceof TypeError)?'Could not reach the Gemini server. Run npm start and open http://localhost:3000/shop.html in your browser. (This page is open at: '+location.href.slice(0,70)+')':(e.message||'Something went wrong.')}
+  finally{btn.disabled=false}
+}
+async function gemSave(){const p=S.products.find(x=>x.id===ST.pid);saveFile('gemini-'+slug(p.name)+'.png',await (await fetch(gemImg)).blob())}
+function gemUse(){   // keep a small copy on the product card
+  const im=new Image();im.onload=()=>{const k=Math.min(1,640/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+    S.products.find(x=>x.id===ST.pid).img=c.toDataURL('image/jpeg',.85);save();closeM();render()};im.src=gemImg;
+}
+
+/* ---------- Gemini tab in the main menu (needs the self-hosted server: npm start) ---------- */
+let GT={pid:'',src:'',out:''};
+function vGem(){
+  return `<h2 class="text-xl font-bold mb-1">Gemini image generator <span class="mut text-base">জেমিনি ছবি</span></h2>
+  <p class="mut text-sm mb-3">Create a new product picture with Gemini. This works only when the page is opened from your own server (npm start).</p>
+  <div class="grid lg:grid-cols-2 gap-4"><div class="card">
+   <label class="lbl">Product (optional)<select id="gt_p" class="inp" onchange="GT.pid=this.value;gtPrev()"><option value="">None, make a new image</option>${S.products.map(p=>`<option value="${p.id}" ${GT.pid===p.id?'selected':''}>${E(p.name)}</option>`).join('')}</select></label>
+   <label class="lbl mt-2">Reference photo (optional, sharper than the saved thumbnail)<input type="file" accept="image/*" class="inp" onchange="gtFile(this.files[0])"></label>
+   <div id="gt_prev" class="mt-2 text-sm mut"></div>
+   <label class="lbl mt-2">Describe the picture<textarea id="gt_t" class="inp" rows="4" placeholder="e.g. a bottle of cooking oil on a sunny kitchen counter, soft morning light"></textarea></label>
+   <div class="flex flex-wrap gap-2 mt-2">${Object.keys(GEM_PROMPTS).map(k=>`<button class="btn2 sm" onclick="gtPreset('${k}')">${SCENES[k]}</button>`).join('')}</div>
+   <label class="lbl mt-2">Shape<select id="gt_a" class="inp"><option value="1:1">Square 1:1</option><option value="4:5">Portrait 4:5</option><option value="16:9">Wide 16:9</option><option value="9:16">Story 9:16</option></select></label>
+   <button class="btn w-full mt-3" id="gt_go" onclick="gtRun()">Generate image</button></div>
+  <div class="card"><h3 class="font-bold mb-2">Result</h3><div id="gt_out" class="mut">Your image will appear here.</div></div></div>`;
+}
+const gtProd=()=>S.products.find(x=>x.id===GT.pid);
+// the reference sent to Gemini: the uploaded photo, otherwise the product's saved photo
+const gtRef=()=>GT.src||((gtProd()&&/^data:image\/(png|jpeg|webp);base64,/.test(gtProd().img||''))?gtProd().img:'');
+function gtPrev(){
+  const el=$('#gt_prev');if(!el)return;const r=gtRef();
+  el.innerHTML=r?`<img src="${r}" alt="" style="max-height:130px;border-radius:8px"><div class="text-xs mt-1">${GT.src?'Uploaded photo':'Saved product photo (small, so the result may be less sharp)'}</div>`:'No reference photo. Gemini will create the picture from your description only.';
+}
+function gtFile(f){   // shrink the upload to 1536px JPEG so it stays fast
+  if(!f)return;const r=new FileReader();
+  r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,1536/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);GT.src=c.toDataURL('image/jpeg',.9);gtPrev()};im.onerror=()=>alert('That image could not be opened.');im.src=r.result};
+  r.readAsDataURL(f);
+}
+function gtPreset(k){const t=$('#gt_t'),p=gtProd();t.value=((p?p.name+' ':'')+GEM_PROMPTS[k]).trim()}
+async function gtRun(){
+  const prompt=$('#gt_t').value.trim(),out=$('#gt_out'),btn=$('#gt_go');
+  if(prompt.length<3){alert('Describe the picture first.');return}
+  btn.disabled=true;btn.textContent='Generating… (10 to 40 seconds)';out.className='mut';out.textContent='Generating…';
+  try{
+    const r=await fetch(API_BASE+'/api/generate-image',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,aspectRatio:$('#gt_a').value,image:gtRef()||undefined})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(d.error||gemHint(r.status));
+    GT.out=d.image;out.className='';
+    out.innerHTML=`<img src="${GT.out}" alt="Gemini result" style="max-width:100%;border-radius:8px"><div class="flex gap-2 mt-2 flex-wrap"><button class="btn sm" onclick="gtSave()">Download PNG</button>${GT.pid?'<button class="btn2 sm" onclick="gtUse()">Use as product image</button>':''}</div><p class="mut text-xs mt-1">AI-generated. Check labels, text and colors against the real product before using it.</p>`;
+  }catch(e){out.className='neg';out.textContent=(e instanceof TypeError)?'Could not reach the Gemini server. Run npm start and open http://localhost:3000/shop.html in your browser. (This page is open at: '+location.href.slice(0,70)+')':(e.message||'Something went wrong.')}
+  finally{btn.disabled=false;btn.textContent='Generate image'}
+}
+async function gtSave(){const p=gtProd();saveFile('gemini-'+(p?slug(p.name):'image')+'.png',await (await fetch(GT.out)).blob())}
+function gtUse(){   // keep a small copy on the product card
+  const im=new Image();im.onload=()=>{const k=Math.min(1,640/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+    gtProd().img=c.toDataURL('image/jpeg',.85);save();alert('Saved as the product image.');render()};im.src=GT.out;
+}
+
+/* ---------- Find a bill by transaction ID, customer, phone or product ---------- */
+let bq='';
+function vBills(){
+  return `<h2 class="text-xl font-bold mb-3">Find a bill <span class="mut text-base">বিল খুঁজুন</span></h2>
+  <div class="flex gap-2 flex-wrap"><input class="inp" style="font-size:16px;flex:1;min-width:200px;margin:0" placeholder="Search by ID (INV-0003 / WS-0002), customer, phone or product…" value="${E(bq)}" oninput="bq=this.value;listBills()">
+  <select class="inp" style="width:auto;margin:0" onchange="bt=this.value;listBills()"><option value="" ${bt===''?'selected':''}>All bills</option><option value="retail" ${bt==='retail'?'selected':''}>Retail</option><option value="ws" ${bt==='ws'?'selected':''}>Wholesale (পাইকারি)</option><option value="due" ${bt==='due'?'selected':''}>Wholesale with due (বাকি)</option></select></div>
+  <div id="blist" class="mt-3"></div>`;
+}
+function listBills(){
+  const q=bq.trim().toLowerCase();
+  const l=S.sales.filter(s=>(!bt||(bt==='ws'?s.type==='ws':bt==='retail'?s.type!=='ws':s.due>0))&&(!q||s.no.toLowerCase().includes(q)||(s.customer||'').toLowerCase().includes(q)||(s.phone||'').includes(q)||s.items.some(i=>i.n.toLowerCase().includes(q)))).slice().reverse();
+  $('#blist').innerHTML=`<p class="mut text-sm mb-2">${q||bt?l.length+' result(s)':'All bills, newest first'}${l.length>50?' · showing the latest 50, type to narrow down':''}</p>`+
+  (l.length?l.slice(0,50).map(s=>{const ws=s.type==='ws';return `<div class="card mb-2"><div class="flex justify-between gap-2 flex-wrap"><div><b>${s.no}</b> ${ws?'<span class="bdg ok">Wholesale · পাইকারি</span>':''} <span class="mut text-sm">${s.date} ${s.time||''}</span><div class="text-sm">${E(s.customer||'Walk-in')} ${s.phone?'· '+E(s.phone):''}</div></div>
+   <div style="text-align:right"><div class="text-lg font-bold">${M(ws?s.grand:s.total)}</div>${ws&&s.due>0?`<div class="text-sm neg">Due (বাকি) ${M(s.due)}</div>`:ws?'<div class="text-sm pos">Paid in full</div>':''}</div></div>
+   <div class="mt-2">${s.items.map(i=>`<div class="row text-sm"><span>${E(i.n)} × ${i.q}</span><span>${M(i.p*i.q)}</span></div>`).join('')}</div>
+   <div class="flex gap-2 mt-2 flex-wrap"><button class="btn sm" onclick="receipt('${s.id}')">${ws?'View / print memo':'View / print receipt'}</button>${ws&&s.due>0?`<button class="btn2 sm" onclick="wPay('${s.id}')">Receive payment</button>`:''}<button class="btn2 sm danger" onclick="sDel('${s.id}')">Cancel sale</button></div></div>`}).join(''):'<div class="card mut">No bill found. Check the ID printed on the receipt.</div>');
+}
+
+/* ---------- Cancel / delete a sale made by mistake ---------- */
+function sDel(id){
+  const s=S.sales.find(x=>x.id===id);if(!s)return;
+  if(!confirm('Cancel '+s.no+' ('+M(s.grand!=null?s.grand:s.total)+')? It will be removed from sales, profit and the ledger, and its items go back into stock. This cannot be undone.'))return;
+  s.items.forEach(i=>{const p=i.id&&prodOf(i.id);if(tracked(p))p.stock=rnd(p.stock+i.q)});
+  S.sales=S.sales.filter(x=>x.id!==id);save();closeM();render();
+}
+
+/* ---------- 4. Expenses & utilities ---------- */
+function vExp(){
+  const l=inM(S.expenses,mon).sort((a,b)=>b.date.localeCompare(a.date)),tot=sum(l,x=>x.amt);
+  return `<div class="flex flex-wrap items-center gap-2 mb-3"><h2 class="text-xl font-bold flex-1">Expenses &amp; bills <span class="mut text-base">খরচ ও বিল</span></h2>
+   <input type="month" class="inp" style="width:auto;margin:0" value="${mon}" onchange="mon=this.value||mon;render()"></div>
+  <div class="grid lg:grid-cols-5 gap-4"><div class="card lg:col-span-2"><h3 class="font-bold mb-2">Add expense</h3>
+   <div class="flex flex-wrap gap-2 mb-2">${EC.map(c=>`<button class="btn2 sm" onclick="$('#e_c').value='${c[0]}'">${c[0]} <span class="mut">${c[1]}</span></button>`).join('')}</div>
+   <label class="lbl">Type (ধরন)<input id="e_c" class="inp" list="ecl" value="Electricity"></label><datalist id="ecl">${EC.map(c=>`<option value="${c[0]}">`).join('')}</datalist>
+   <div class="grid grid-cols-2 gap-2 mt-2"><label class="lbl">Amount (টাকা)<input id="e_a" type="number" min="0" step="any" class="inp"></label>
+   <label class="lbl">Date<input id="e_d" type="date" class="inp" value="${today()}"></label></div>
+   <label class="lbl mt-2">Note (optional)<input id="e_n" class="inp"></label>
+   <button class="btn mt-3 w-full" onclick="eAdd()">Save expense</button></div>
+  <div class="card lg:col-span-3"><div class="row text-lg font-bold"><span>Total this month</span><span>${M(tot)}</span></div>
+   ${EC.map(c=>[c,sum(l.filter(x=>x.cat===c[0]),x=>x.amt)]).filter(a=>a[1]).map(a=>`<div class="row text-sm"><span>${a[0][0]} <span class="mut">${a[0][1]}</span></span><span>${M(a[1])}</span></div>`).join('')}
+   <h3 class="font-bold mt-4 mb-1">Entries</h3>
+   ${l.length?l.map(x=>`<div class="row items-center"><span>${E(x.cat)} <span class="mut text-xs">${x.date} ${E(x.note||'')}</span></span><span>${M(x.amt)} <button class="btn2 sm danger" onclick="eDel('${x.id}')">✕</button></span></div>`).join(''):'<p class="mut">No expenses logged for this month.</p>'}</div></div>`;
+}
+function eAdd(){
+  const a=+$('#e_a').value,c=$('#e_c').value.trim(),d=$('#e_d').value;
+  if(!(a>0)||!c||!d){alert('Enter a type, an amount above zero and a date.');return}
+  S.expenses.push({id:uid(),cat:c,amt:a,date:d,note:$('#e_n').value.trim()});save();mon=d.slice(0,7);render();
+}
+function eDel(id){S.expenses=S.expenses.filter(x=>x.id!==id);save();render()}
+
+/* ---------- 5. Income & expense statement ---------- */
+function vLed(){
+  const s=inM(S.sales,mon),e=inM(S.expenses,mon),rev=sum(s,x=>x.total),cg=sum(s,cogs),ex=sum(e,x=>x.amt),gp=rev-cg,net=gp-ex;
+  const keys=[...new Set([...S.sales,...S.expenses].map(x=>x.date.slice(0,7)))].sort().reverse();
+  const by=EC.map(c=>[c,sum(e.filter(x=>x.cat===c[0]),x=>x.amt)]);
+  const other=ex-sum(by,a=>a[1]);
+  return `<div class="flex flex-wrap items-center gap-2 mb-3"><h2 class="text-xl font-bold flex-1">Income &amp; expense statement <span class="mut text-base">আয়-ব্যয়ের হিসাব</span></h2>
+   <input type="month" class="inp" style="width:auto;margin:0" value="${mon}" onchange="mon=this.value||mon;render()"><button class="btn" onclick="monRep()">Monthly report · মাসিক রিপোর্ট</button></div>
+  <div class="grid lg:grid-cols-2 gap-4"><div class="card">
+   <div class="row font-semibold"><span>Revenue – sales (বিক্রয় আয়)</span><span>${M(rev)}</span></div>
+   <div class="row"><span>− Purchase cost of goods sold (ক্রয় খরচ)</span><span>${M(cg)}</span></div>
+   <div class="row font-semibold"><span>Gross profit (মোট লাভ)</span><span class="${cls(gp)}">${M(gp)}</span></div>
+   ${by.map(a=>`<div class="row text-sm"><span>− ${a[0][0]} (${a[0][1]})</span><span>${M(a[1])}</span></div>`).join('')}
+   ${other>0?`<div class="row text-sm"><span>− Other</span><span>${M(other)}</span></div>`:''}
+   <div class="row font-semibold"><span>− Total operating expenses (মোট খরচ)</span><span>${M(ex)}</span></div>
+   <div class="row text-xl font-bold" style="border:0"><span>Net profit (নিট লাভ)</span><span class="${cls(net)}">${M(net)}</span></div></div>
+  <div class="card"><h3 class="font-bold mb-2">All months</h3><div class="overflow-x-auto"><table class="w-full text-sm"><tr class="mut text-left"><th>Month</th><th>Sales</th><th>Costs</th><th>Net</th></tr>
+   ${keys.map(k=>{const ss=inM(S.sales,k),r=sum(ss,x=>x.total),c=sum(ss,cogs)+sum(inM(S.expenses,k),x=>x.amt);return `<tr class="cursor-pointer" onclick="mon='${k}';render()"><td>${k}</td><td>${M(r)}</td><td>${M(c)}</td><td class="${cls(r-c)}">${M(r-c)}</td></tr>`}).join('')||'<tr><td class="mut">No data yet</td></tr>'}</table></div></div></div>
+  <div class="card mt-4"><h3 class="font-bold mb-2">Bills in ${mon} <span class="mut text-sm">বিল ইতিহাস</span></h3>
+   ${s.length?s.slice().reverse().map(x=>`<div class="row items-center"><span>${x.no} · ${E(x.customer||'Walk-in')} <span class="mut text-xs">${x.date}</span></span><span>${M(x.total)} <button class="btn2 sm" onclick="receipt('${x.id}')">Receipt</button> <button class="btn2 sm danger" onclick="sDel('${x.id}')">Cancel sale</button></span></div>`).join(''):'<p class="mut">No bills this month.</p>'}</div>`;
+}
+
+/* ---------- Shop info ---------- */
+function shopForm(){
+  modal(`<h3 class="font-bold text-lg mb-2">Shop info <span class="mut text-sm">দোকানের তথ্য</span></h3>
+  <label class="lbl">Shop name<input id="s_n" class="inp" value="${E(S.shop.name)}"></label>
+  <label class="lbl mt-2">Address<input id="s_a" class="inp" value="${E(S.shop.addr)}"></label>
+  <label class="lbl mt-2">Phone<input id="s_p" class="inp" value="${E(S.shop.phone)}"></label>
+  <label class="lbl mt-2">Low-stock alert level (স্টক সতর্কতার সীমা)<input id="s_l" type="number" min="1" step="1" class="inp" value="${lowN()}"></label>
+  <p class="mut text-xs mt-2">Printed at the top of every receipt. Each account keeps its own separate shop data in this browser.</p>
+  <div class="flex gap-2 mt-3"><button class="btn" onclick="shopSave()">Save</button><button class="btn2" onclick="closeM()">Cancel</button></div>`);
+}
+function shopSave(){S.shop=Object.assign({},S.shop,{name:$('#s_n').value.trim()||'My Shop',addr:$('#s_a').value.trim(),phone:$('#s_p').value.trim(),low:Math.max(1,Math.round(+$('#s_l').value)||5)});save();closeM();render()}
+
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('/sw.js').catch(()=>{});
+/* =========================================================
+   STOCK · TOASTS · WHOLESALE (পাইকারি)
+   ========================================================= */
+let plow=false,bt='',lowShown=false;
+let wcart=[],wd={t:'flat',v:0},wtr=0,wpaid=null,wb={n:'',p:'',a:''};
+
+/* ---------- toast notifications ---------- */
+function toast(msg,kind,bn){
+  const box=$('#toasts'),d=document.createElement('div');
+  [...box.children].forEach(x=>{if(x.firstChild&&x.firstChild.textContent===msg)x.remove()});   // same message replaces the old one
+  d.className='toast '+(kind||'');d.setAttribute('role','alert');d.textContent=msg;
+  if(bn){const s=document.createElement('div');s.className='text-xs mut';s.textContent=bn;d.appendChild(s)}
+  d.onclick=()=>d.remove();box.appendChild(d);
+  setTimeout(()=>d.remove(),kind==='bad'?9000:5500);
+  while(box.children.length>4)box.firstChild.remove();
+}
+
+/* ---------- stock helpers (stock=null/blank → "not tracked": no limits, no alerts) ---------- */
+const rnd=n=>Math.round(n*1000)/1000;
+const prodOf=id=>S.products.find(x=>x.id===id);
+const tracked=p=>!!p&&p.stock!=null&&p.stock!==''&&isFinite(p.stock);
+const lowN=()=>{const v=+S.shop.low;return v>0?v:5};
+const sst=p=>!tracked(p)?'':p.stock<=0?'out':p.stock<lowN()?'low':'ok';
+const stBadge=p=>{const k=sst(p);return !tracked(p)?'<span class="bdg">Stock not tracked</span>':k==='out'?'<span class="bdg out">Out of stock · স্টক শেষ</span>':`<span class="bdg ${k}">${k==='low'?'Low · ':''}Stock ${p.stock}</span>`};
+const lowList=()=>S.products.filter(p=>sst(p)==='out'||sst(p)==='low').sort((a,b)=>a.stock-b.stock);
+const stockMsg=p=>sst(p)==='out'?`Attention: ${p.name} is out of stock! Please restock soon.`:`Attention: ${p.name} is running low on stock! Please restock soon.`;
+function canSell(p,n){   // block selling more than we have
+  if(!tracked(p)||n<=p.stock)return true;
+  toast(p.stock<=0?`${p.name} is out of stock.`:`Only ${p.stock} of ${p.name} in stock.`,'warn',p.stock<=0?'স্টকে নেই':`স্টকে মাত্র ${p.stock}টি আছে`);
+  return false;
+}
+function checkStock(lines){
+  for(const l of lines){const p=prodOf(l.id);if(tracked(p)&&l.q>p.stock){toast(`Not enough stock for ${p.name}: ${p.stock} available, ${l.q} on the bill.`,'bad','স্টক যথেষ্ট নয়');return false}}
+  return true;
+}
+function deduct(items){   // after a completed sale: reduce stock, return products that are now low/out
+  const w=[];items.forEach(i=>{const p=prodOf(i.id);if(!tracked(p))return;p.stock=rnd(p.stock-i.q);if(sst(p)==='out'||sst(p)==='low')w.push(p)});
+  return w;
+}
+const warnLow=w=>w.forEach(p=>toast(stockMsg(p),sst(p)==='out'?'bad':'warn','স্টক কমে গেছে – শীঘ্রই স্টক পূরণ করুন'));
+function lowSummary(){
+  const l=lowList();if(!l.length)return;
+  if(l.length===1){toast(stockMsg(l[0]),sst(l[0])==='out'?'bad':'warn','স্টক পূরণ করুন');return}
+  toast(`Attention: ${l.length} products are low on stock (${l.slice(0,3).map(p=>p.name).join(', ')}${l.length>3?', …':''}). Please restock soon.`,'warn','স্টক পূরণ করুন');
+}
+function restock(id){
+  const p=prodOf(id);if(!p)return;
+  const v=prompt('Add how many to "'+p.name+'"? · কত পরিমাণ যোগ করবেন?','');if(v===null)return;
+  const a=+v;if(!(a>0)){toast('Enter a quantity above zero.','warn');return}
+  p.stock=rnd((tracked(p)?p.stock:0)+a);save();render();toast(p.name+': stock is now '+p.stock+'.','ok');
+}
+function lowWidget(){
+  const l=lowList(),tr=S.products.filter(tracked).length;
+  if(!tr)return '';
+  if(!l.length)return `<div class="card" style="border-color:var(--ok)"><b class="pos">✓ Stock OK · স্টক ঠিক আছে</b> <span class="mut text-sm">All ${tr} tracked products are at ${lowN()} or more.</span></div>`;
+  const out=l.filter(p=>sst(p)==='out').length;
+  return `<div class="card" style="border:2px solid var(--bad)"><div class="flex items-center gap-2 mb-2 flex-wrap"><h3 class="font-bold flex-1 neg">⚠ Low Stock Alert <span class="text-sm">স্টক শেষ হওয়ার সতর্কবার্তা</span></h3><span class="bdg out">${l.length} item${l.length>1?'s':''}${out?' · '+out+' out':''}</span><button class="btn2 sm" onclick="plow=true;go('prod')">View all</button></div>
+   ${l.slice(0,6).map(p=>`<div class="row items-center"><span class="truncate">${E(p.name)}</span><span class="flex items-center gap-2">${stBadge(p)}<button class="btn2 sm" onclick="restock('${p.id}')">+ Stock</button></span></div>`).join('')}
+   ${l.length>6?`<div class="mut text-xs mt-1">+ ${l.length-6} more</div>`:''}</div>`;
+}
+const dueTotal=()=>sum(S.sales.filter(s=>s.type==='ws'),s=>s.due||0);
+function dashTop(){
+  const u=me(),lw=lowWidget(),due=dueTotal();
+  const empty=!S.products.length&&!S.sales.length;
+  return (empty?`<div class="card mb-3" style="border-color:var(--ac)"><h3 class="font-bold">Welcome, ${E(u?u.name:'')}! <span class="mut text-sm">আপনার দোকান সাজিয়ে নিন</span></h3><p class="text-sm mut mt-1">This is a fresh shop – nothing has been added yet.</p>
+   <div class="flex gap-2 mt-2 flex-wrap"><button class="btn" onclick="shopForm()">1 · Shop info · দোকানের তথ্য</button><button class="btn2" onclick="go('prod');pForm()">2 · Add products · পণ্য যোগ করুন</button></div></div>`:'')+
+  ((lw||due>0)?`<div class="grid lg:grid-cols-3 gap-3 mb-4">${lw?`<div class="lg:col-span-2">${lw}</div>`:''}${due>0?`<div class="card"><div class="mut text-sm">Wholesale dues <span class="text-xs">পাইকারি বাকি</span></div><div class="text-2xl font-bold neg">${M(due)}</div><button class="btn2 sm mt-2" onclick="bt='due';go('bills')">View dues</button></div>`:''}</div>`:'');
+}
+
+/* ---------- wholesale POS ---------- */
+const wp=p=>p.ws>0?p.ws:p.sell;
+function vWs(){
+  return `<div class="grid lg:grid-cols-5 gap-4">
+  <section class="lg:col-span-3">
+   <h2 class="text-xl font-bold mb-3">Wholesale <span class="mut text-base">পাইকারি বিক্রয়</span></h2>
+   <div class="flex gap-2 mb-3"><input class="inp" style="margin:0" placeholder="Search product (পণ্য খুঁজুন)…" oninput="pq=this.value;gridWs()" value="${E(pq)}">
+   <select class="inp" style="margin:0;width:150px" onchange="pc=this.value;gridWs()"><option value="">All</option>${cats().map(c=>`<option ${pc===c?'selected':''}>${E(c)}</option>`).join('')}</select></div>
+   <div id="wgrid" class="grid grid-cols-2 md:grid-cols-3 gap-3"></div></section>
+  <section class="lg:col-span-2"><div class="card lg:sticky lg:top-16">
+   <h3 class="font-bold mb-2">Wholesale bill <span class="mut text-sm">পাইকারি বিল</span></h3>
+   <div id="wItems"></div>
+   <div class="grid grid-cols-2 gap-2 mt-3">
+    <label class="lbl">Trader name (ব্যবসায়ীর নাম)<input id="w_n" class="inp" value="${E(wb.n)}" oninput="wb.n=this.value"></label>
+    <label class="lbl">Phone (মোবাইল)<input id="w_p" class="inp" inputmode="tel" value="${E(wb.p)}" oninput="wb.p=this.value"></label>
+    <label class="lbl col-span-2">Business address (ব্যবসার ঠিকানা)<input id="w_a" class="inp" value="${E(wb.a)}" oninput="wb.a=this.value"></label>
+    <label class="lbl">Wholesale discount (ছাড়)<select class="inp" onchange="wd.t=this.value;wtotals()"><option value="flat" ${wd.t==='flat'?'selected':''}>Flat ৳</option><option value="pct" ${wd.t==='pct'?'selected':''}>Percent %</option></select></label>
+    <label class="lbl">Discount amount<input type="number" min="0" step="any" class="inp" value="${wd.v||''}" oninput="wd.v=+this.value||0;wtotals()"></label>
+    <label class="lbl col-span-2">Transport / delivery charge (গাড়ি ভাড়া)<input type="number" min="0" step="any" class="inp" value="${wtr||''}" oninput="wtr=+this.value||0;wtotals()"></label></div>
+   <div id="wTot" class="mt-3"></div>
+   <div class="grid grid-cols-3 gap-2 mt-2 items-end">
+    <label class="lbl col-span-2">Paid now (পরিশোধ) – empty = paid in full<input id="w_paid" type="number" min="0" step="any" class="inp" value="${wpaid==null?'':wpaid}" oninput="wpaid=this.value===''?null:(+this.value||0);wtotals()"></label>
+    <button class="btn2" onclick="wpaid=null;$('#w_paid').value='';wtotals()">Full paid</button></div>
+   <div class="flex gap-2 mt-3"><button class="btn flex-1" onclick="wcheckout()">Complete &amp; print memo</button><button class="btn2" onclick="wreset()">Clear</button></div>
+  </div></section></div>`;
+}
+function gridWs(){
+  const l=S.products.filter(p=>p.name.toLowerCase().includes(pq.toLowerCase())&&(!pc||p.cat===pc));
+  $('#wgrid').innerHTML=l.length?l.map(p=>{const k=sst(p);return `<button class="card text-left cursor-pointer ${k==='out'?'outc':k==='low'?'lowc':''}" style="${k==='out'?'opacity:.65':''}" onclick="wadd('${p.id}')">${ph(p)}<div class="font-semibold mt-1 truncate">${E(p.name)}</div>
+   <div class="flex items-center justify-between gap-1 flex-wrap"><span class="pos font-bold">${M(wp(p))}</span>${tracked(p)?`<span class="bdg ${k}">${k==='out'?'Out':p.stock}</span>`:''}</div>${p.ws>0?'':'<div class="text-xs mut">retail price (no wholesale price set)</div>'}</button>`}).join(''):'<p class="mut col-span-full">No products. Add some in Products first.</p>';
+}
+function wadd(id){const p=prodOf(id),c=wcart.find(x=>x.id===id);if(!canSell(p,(c?c.q:0)+1))return;c?c.q++:wcart.push({id,q:1,p:wp(p)});wcartUI()}
+function wq(id,d){const c=wcart.find(x=>x.id===id),p=prodOf(id);if(d>0&&!canSell(p,c.q+d))return;c.q=rnd(c.q+d);if(c.q<=0)wcart=wcart.filter(x=>x.id!==id);wcartUI()}
+function wsetQ(id,v){const c=wcart.find(x=>x.id===id),p=prodOf(id);let q=Math.max(1,+v||1);if(!canSell(p,q))q=Math.max(1,p.stock);c.q=q;wcartUI()}
+function wsetP(id,v){wcart.find(x=>x.id===id).p=Math.max(0,+v||0);wcartUI()}
+function wcartUI(){
+  $('#wItems').innerHTML=wcart.length?wcart.map(c=>{const p=prodOf(c.id);return `<div class="row items-center"><div class="flex-1 min-w-0"><div class="truncate">${E(p.name)}</div>
+   <div class="mut text-xs flex items-center gap-1 flex-wrap">Unit ৳<input type="number" min="0" step="any" class="inp" style="width:78px;margin:0;padding:2px 6px" value="${c.p}" onchange="wsetP('${c.id}',this.value)">${tracked(p)?'· '+p.stock+' in stock':''}</div></div>
+   <div style="text-align:right"><div class="flex items-center gap-1"><button class="btn2 sm" onclick="wq('${c.id}',-1)">−</button><input type="number" min="1" step="any" class="inp" style="width:60px;margin:0;text-align:center;padding:3px" value="${c.q}" onchange="wsetQ('${c.id}',this.value)"><button class="btn2 sm" onclick="wq('${c.id}',1)">+</button><button class="btn2 sm" onclick="wq('${c.id}',10)">+10</button></div>
+   <div class="text-sm font-semibold mt-1">${M(c.p*c.q)}</div></div></div>`}).join(''):'<p class="mut">Tap a product to add it to the wholesale bill.</p>';
+  wtotals();
+}
+function wcalc(){
+  const sub=sum(wcart,c=>c.p*c.q),d=wd.t==='pct'?sub*Math.min(wd.v,100)/100:Math.min(wd.v,sub),total=sub-d,tr=Math.max(0,+wtr||0),grand=total+tr;
+  const paid=wpaid==null?grand:Math.min(Math.max(+wpaid||0,0),grand);
+  return {sub,d,total,tr,grand,paid,due:Math.round((grand-paid)*100)/100};
+}
+function wtotals(){
+  const t=wcalc();
+  $('#wTot').innerHTML=`<div class="row"><span>Subtotal (মোট)</span><span>${M(t.sub)}</span></div><div class="row"><span>Wholesale discount (ছাড়)</span><span>− ${M(t.d)}</span></div><div class="row"><span>Transport / delivery (গাড়ি ভাড়া)</span><span>+ ${M(t.tr)}</span></div>
+   <div class="row text-lg font-bold"><span>Grand total (সর্বমোট)</span><span>${M(t.grand)}</span></div><div class="row"><span>Paid (পরিশোধ)</span><span>${M(t.paid)}</span></div>
+   <div class="row text-lg font-bold"><span>Remaining due (বাকি)</span><span class="${t.due>0?'neg':'pos'}">${M(t.due)}</span></div>`;
+}
+function wreset(){wcart=[];wd={t:'flat',v:0};wtr=0;wpaid=null;wb={n:'',p:'',a:''};if(tab==='ws')render()}
+function wcheckout(){
+  if(!wcart.length){alert('Add at least one product first.');return}
+  if(wcart.some(c=>!(c.p>0))){alert('Every item needs a unit price above zero.');return}
+  if(!checkStock(wcart))return;
+  const t=wcalc();
+  if(t.due>0&&!wb.n.trim()){alert('Enter the trader name – it is needed to record the due (বাকি).');$('#w_n').focus();return}
+  const s={id:uid(),type:'ws',no:'WS-'+String(S.wseq++).padStart(4,'0'),date:today(),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}),
+   customer:wb.n.trim(),phone:wb.p.trim(),addr:wb.a.trim(),dt:wd.t,dv:wd.v,disc:t.d,sub:t.sub,total:t.total,transport:t.tr,grand:t.grand,paid:t.paid,due:t.due,pays:[],
+   items:wcart.map(c=>{const p=prodOf(c.id);return {id:p.id,n:p.name,p:c.p,c:p.buy,q:c.q}})};
+  S.sales.push(s);const w=deduct(s.items);save();wreset();wsReceipt(s.id);warnLow(w);
+}
+function wPay(id){
+  const s=S.sales.find(x=>x.id===id);if(!s||!(s.due>0))return;
+  const v=prompt('Payment received from '+(s.customer||'trader')+' (৳) · কত টাকা পেলেন?\nDue: '+M(s.due),s.due);if(v===null)return;
+  const a=Math.round(+v*100)/100;if(!(a>0)||a>s.due+0.001){toast('Enter an amount above 0 and up to the due balance.','warn');return}
+  s.paid=Math.round((s.paid+a)*100)/100;s.due=Math.max(0,Math.round((s.due-a)*100)/100);(s.pays=s.pays||[]).push({date:today(),amt:a});
+  save();closeM();render();toast('Received '+M(a)+'. Remaining due '+M(s.due)+'.','ok');
+}
+
+/* ---------- wholesale cash memo (80mm thermal or A4) ---------- */
+function pageStyle(v){let st=$('#pgsz');if(!st){st=document.createElement('style');st.id='pgsz';document.head.appendChild(st)}st.textContent=v==='th'?'@page{size:80mm auto;margin:3mm}':v==='a4'?'@page{size:A4;margin:12mm}':''}
+function wsBody(s){
+  const hr='<hr style="margin:6px 0;border-color:#000">',pays=s.pays||[];
+  return `${shopHead()}
+  <div style="text-align:center;border:2px solid #000;padding:4px;margin:4px 0"><b style="font-size:1.15em">WHOLESALE CASH MEMO</b><br><b>পাইকারি ক্যাশ মেমো</b></div>
+  <div class="row"><span><b>Memo No: ${s.no}</b></span><span>${s.date} ${s.time||''}</span></div>
+  <div style="border:1px solid #000;padding:5px;margin:6px 0"><b>Buyer / Trader (ক্রেতা):</b> ${E(s.customer||'—')}<br>Phone (মোবাইল): ${E(s.phone||'—')}<br>Business address (ঠিকানা): ${E(s.addr||'—')}</div>
+  <table><tr><th>Item (পণ্য)</th><th>Qty</th><th>Unit price</th><th>Amount</th></tr>
+   ${s.items.map((i,k)=>`<tr><td>${k+1}. ${E(i.n)}</td><td>${i.q}</td><td>${M(i.p)}</td><td>${M(i.q*i.p)}</td></tr>`).join('')}</table>
+  <div class="row"><span>Subtotal (মোট)</span><span>${M(s.sub)}</span></div>
+  <div class="row"><span>Wholesale discount (পাইকারি ছাড়)${s.dt==='pct'&&s.dv?' '+s.dv+'%':''}</span><span>− ${M(s.disc)}</span></div>
+  <div class="row"><span>Transport / delivery (গাড়ি ভাড়া)</span><span>+ ${M(s.transport||0)}</span></div>
+  <div class="row" style="font-size:1.15em"><b>Grand total (সর্বমোট)</b><b>${M(s.grand)}</b></div>
+  <div class="row"><span>Paid amount (পরিশোধ)</span><span>${M(s.paid)}</span></div>
+  <div class="row" style="font-size:1.2em;border:2px solid #000;padding:5px"><b>Remaining due (বাকি)</b><b>${M(s.due)}</b></div>
+  ${pays.length?`<div style="margin-top:6px"><b>Payments received later (পরে প্রাপ্ত):</b>${pays.map(p=>`<div class="row"><span>${p.date}</span><span>${M(p.amt)}</span></div>`).join('')}</div>`:''}
+  <div style="display:flex;justify-content:space-between;gap:12px;margin-top:26px;font-size:.85em"><span style="border-top:1px solid #000;padding-top:2px">Receiver (গ্রহীতা)</span><span style="border-top:1px solid #000;padding-top:2px">Authorised (কর্তৃপক্ষ)</span></div>
+  <p style="text-align:center;margin-top:10px">ধন্যবাদ – Thank you for your business.</p>`;
+}
+function wsReceipt(id){
+  const s=S.sales.find(x=>x.id===id);if(!s)return;
+  modal(`<div class="noprint flex gap-2 mb-3 flex-wrap items-center"><button class="btn" onclick="window.print()">Print memo (মেমো প্রিন্ট)</button><button class="btn" onclick="wsDl('${s.id}')">Download</button>
+   <select class="inp" style="width:auto;margin:0" onchange="wsFmt(this.value)"><option value="a4">A4 / standard</option><option value="th">Thermal 80mm</option></select><button class="btn2" onclick="closeM()">Close</button>
+   ${s.due>0?`<button class="btn2" onclick="wPay('${s.id}')">Receive payment (বাকি আদায়)</button>`:''}<button class="btn2 danger" onclick="sDel('${s.id}')">Cancel this sale</button></div>
+  <div id="receipt" class="a4">${wsBody(s)}</div>`);
+  $('.mb').style.maxWidth='780px';pageStyle('a4');
+}
+function wsFmt(v){$('#receipt').className=v;pageStyle(v)}
+function wsDl(id){
+  const s=S.sales.find(x=>x.id===id),f=$('#receipt')&&$('#receipt').classList.contains('th')?'th':'a4';
+  saveFile('wholesale-memo-'+s.no+'-'+(f==='th'?'80mm':'A4')+'.html',docHtml('Wholesale memo '+s.no,wsBody(s),f));
+}
+
+/* =========================================================
+   AUTHENTICATION  (login / sign-up / OTP / Google / session)
+   Stored in localStorage under KEY+'.auth' – next to the shop
+   data key. This is browser-side only: see notes in AUTH_CFG.
+   ========================================================= */
+const AKEY=KEY+'.auth';
+const AUTH_CFG={
+  demo:true,            // true  = no SMS/e-mail gateway: the OTP is shown on screen for testing.
+                        // false = OTP is handed to sendOtp() below and never shown.
+  googleClientId:'',    // paste your Google OAuth Web Client ID to enable real Google sign-in
+  otpTtl:300,           // OTP lifetime (seconds)
+  resendSec:30,         // "Resend OTP" cool-down (seconds)
+  maxTries:5,           // wrong OTP entries allowed per code
+  sessionDays:30,
+  // Production hook: send `code` to `target` (channel = 'sms' | 'email') via your own backend/provider.
+  sendOtp:async(target,code,channel)=>{throw new Error('Connect an SMS/e-mail provider in AUTH_CFG.sendOtp')}
+};
+let A={users:[],session:null};            // users:[{id,name,email,phone,pw:{salt,hash}|null,provider,created}]
+let au={mode:'login',via:'email',step:'form',v:{name:'',id:''},pend:null,fails:0,lock:0,tm:null};
+let OTP=null,appOn=false;
+
+function aLoad(){try{const r=JSON.parse(localStorage.getItem(AKEY));if(r&&Array.isArray(r.users))A=Object.assign({users:[],session:null},r)}catch(e){}}
+function aSave(){try{localStorage.setItem(AKEY,JSON.stringify(A))}catch(e){}}
+function me(){
+  const s=A.session;if(!s)return null;
+  if(s.exp<Date.now()){A.session=null;aSave();return null}
+  return A.users.find(u=>u.id===s.uid)||null;
+}
+
+/* ---------- helpers ---------- */
+const okEmail=v=>/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
+function normPhone(v){            // Bangladesh mobile: 01XXXXXXXXX (accepts +880 / 880 and Bengali digits)
+  let d=String(v).replace(/[০-৯]/g,c=>'০১২৩৪৫৬৭৮৯'.indexOf(c)).replace(/[\s\-()]/g,'');
+  if(d.startsWith('+880'))d='0'+d.slice(4);else if(d.startsWith('880')&&d.length===13)d='0'+d.slice(3);
+  return /^01[3-9]\d{8}$/.test(d)?d:null;
+}
+const maskT=t=>t.includes('@')?t.replace(/^(.{1,2})[^@]*(@.*)$/,'$1•••$2'):'•••••••'+t.slice(-4);
+async function kdf(pw,salt){
+  try{
+    const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);
+    const b=await crypto.subtle.deriveBits({name:'PBKDF2',salt:new TextEncoder().encode(salt),iterations:100000,hash:'SHA-256'},k,256);
+    return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('');
+  }catch(e){let h=5381;for(const c of salt+pw)h=((h<<5)+h+c.charCodeAt(0))|0;return 'f'+h}   // fallback if Web Crypto is unavailable
+}
+const mkPw=async p=>{const salt=uid()+uid();return {salt,hash:await kdf(p,salt)}};
+const chkPw=async(p,r)=>(await kdf(p,r.salt))===r.hash;
+function aErr(m){const e=$('#a_err');if(e){e.style.color='';e.textContent=m}}
+function aKeep(){const n=$('#a_name'),i=$('#a_id'),h=$('#a_shop');if(n)au.v.name=n.value;if(i)au.v.id=i.value;if(h)au.v.shop=h.value}
+function aSet(k,v){aKeep();au[k]=v;authView()}
+function pwTog(id,b){const i=$('#'+id),s=i.type==='password';i.type=s?'text':'password';b.textContent=s?'Hide':'Show'}
+function aFail(){au.fails++;if(au.fails>=5){au.lock=Date.now()+30000;au.fails=0}}
+const GLOGO='<svg width="20" height="20" viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.8 2.4 30.3 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.1C12.4 13.6 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M46.5 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.7c-.6 3-2.3 5.5-4.8 7.2l7.5 5.8c4.4-4.1 7.1-10.1 7.1-17.5z"/><path fill="#FBBC05" d="M10.5 28.7a14.5 14.5 0 0 1 0-9.4l-7.9-6.1a24 24 0 0 0 0 21.6l7.9-6.1z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.5-5.8c-2.1 1.4-4.9 2.3-8.4 2.3-6.3 0-11.6-4.1-13.5-9.8l-7.9 6.1C6.5 42.6 14.6 48 24 48z"/></svg>';
+const pwField=(id,l,ac)=>`<label class="lbl mt-2">${l}<div class="pwr"><input id="${id}" type="password" class="inp" autocomplete="${ac}" style="padding-right:56px"><button type="button" class="pwt" onclick="pwTog('${id}',this)">Show</button></div></label>`;
+
+/* ---------- gate: show app or login screen ---------- */
+function gate(){
+  const u=me(),ok=!!u;
+  if(ok&&curUid!==u.id)loadUser(u);                       // switch to this account's own shop data
+  if(!ok&&curUid){curUid=null;DBK=null;S=blank()}         // never keep another user's data in memory
+  if(!ok&&$('#auth').classList.contains('hidden')){au.step='form';authView()}
+  $('#auth').classList.toggle('hidden',ok);
+  $('#app').style.display=ok?'':'none';
+  $('#userBox').classList.toggle('hidden',!ok);
+  if(ok){
+    $('#uAv').textContent=(u.name||'?').trim().charAt(0).toUpperCase();
+    $('#uName').textContent=u.name;
+    $('#uSub').textContent=u.phone||u.email;
+  }
+  appOn=ok;return ok;
+}
+function logout(){
+  if(!confirm('লগআউট করবেন? · Log out?'))return;
+  A.session=null;aSave();closeM();OTP=null;au.step='form';au.mode='login';au.pend=null;render();
+}
+function startSession(u){
+  A.session={uid:u.id,at:Date.now(),exp:Date.now()+AUTH_CFG.sessionDays*864e5};aSave();
+  OTP=null;clearInterval(au.tm);au.step='form';au.pend=null;au.v={name:'',id:''};tab='dash';render();
+}
+
+/* ---------- views ---------- */
+function authView(){
+  clearInterval(au.tm);
+  const h=au.step==='otp'?otpView():au.step==='gdemo'?gdemoView():formView();
+  $('#auth').innerHTML='<div class="ab">'+h+'</div>';
+  $('#auth').scrollTop=0;
+  if(au.step==='otp'){otpWire();otpTick()}
+}
+function formView(){
+  const su=au.mode==='signup',em=au.via==='email',v=au.v;
+  const go=su?'Create account &amp; send OTP · অ্যাকাউন্ট খুলুন':'Log in &amp; send OTP · লগইন';
+  return `<div class="text-center mb-4"><div style="font-size:40px">🧾</div><h1 class="text-2xl font-bold">Dokan Hisab</h1>
+   <p class="mut text-sm">${su?'নতুন অ্যাকাউন্ট খুলুন · Create your account':'আপনার অ্যাকাউন্টে ঢুকুন · Welcome back'}</p></div>
+  <div class="card" style="padding:18px">
+   <button type="button" class="gbtn" onclick="gSign()">${GLOGO} Continue with Google Account</button>
+   <div class="divl">or</div>
+   <div class="seg mb-2" role="tablist"><button type="button" class="${su?'':'on'}" onclick="aSet('mode','login')">Log in <span class="text-xs">লগইন</span></button><button type="button" class="${su?'on':''}" onclick="aSet('mode','signup')">Sign up <span class="text-xs">সাইন আপ</span></button></div>
+   <div class="seg" role="tablist"><button type="button" class="${em?'on':''}" onclick="aSet('via','email')">✉️ Email</button><button type="button" class="${em?'':'on'}" onclick="aSet('via','phone')">📱 Mobile</button></div>
+   <form onsubmit="return aSubmit(event)" novalidate>
+    ${su?`<label class="lbl mt-3">Full name · নাম<input id="a_name" class="inp" autocomplete="name" value="${E(v.name)}"></label><label class="lbl mt-2">Shop name · দোকানের নাম (optional)<input id="a_shop" class="inp" autocomplete="organization" value="${E(v.shop||'')}"></label>`:''}
+    <label class="lbl mt-2">${em?'Email · ইমেইল':'Mobile number · মোবাইল নম্বর'}<input id="a_id" class="inp" ${em?'type="email" inputmode="email" autocomplete="email" placeholder="you@example.com"':'type="tel" inputmode="tel" autocomplete="tel" placeholder="01XXXXXXXXX"'} value="${E(v.id)}"></label>
+    ${pwField('a_pw','Password · পাসওয়ার্ড'+(su?' (min 8)':''),su?'new-password':'current-password')}
+    ${su?pwField('a_pw2','Confirm password · আবার লিখুন','new-password'):''}
+    <div id="a_err" class="aerr" role="alert"></div>
+    <button id="a_go" class="btn w-full mt-1" style="padding:11px;font-size:16px">${go}</button>
+   </form>
+   <p class="text-sm text-center mut mt-3">${su?'Already have an account?':'New here?'} <a href="#" class="font-semibold" style="color:var(--ac)" onclick="aSet('mode','${su?'login':'signup'}');return false">${su?'Log in':'Sign up'}</a></p>
+  </div>
+  <p class="text-xs text-center mut mt-3">Every login asks for an OTP. Each account has its own separate shop data in this browser.</p>`;
+}
+function otpView(){
+  const em=OTP.channel==='email';
+  return `<div class="text-center mb-4"><div style="font-size:40px">${em?'✉️':'📱'}</div><h1 class="text-xl font-bold">Verify OTP <span class="mut text-base">ওটিপি যাচাই</span></h1>
+   <p class="mut text-sm mt-1">6-digit code sent to <b>${E(maskT(OTP.target))}</b></p></div>
+  <div class="card" style="padding:18px">
+   ${AUTH_CFG.demo?`<div class="text-sm mb-3" style="background:var(--soft);color:var(--ac);padding:8px 10px;border-radius:8px">Demo mode – no SMS/email is sent. Your code: <b style="letter-spacing:2px">${OTP.code}</b></div>`:''}
+   <div class="flex gap-2 justify-center" id="a_otp">${[0,1,2,3,4,5].map(i=>`<input class="otpb" inputmode="numeric" pattern="[0-9]*" autocomplete="${i?'off':'one-time-code'}" aria-label="Digit ${i+1}">`).join('')}</div>
+   <div id="a_err" class="aerr text-center" role="alert"></div>
+   <button id="a_ver" class="btn w-full mt-1" style="padding:11px;font-size:16px" onclick="otpVerify()">Verify &amp; continue · যাচাই করুন</button>
+   <div class="text-center mt-3"><button id="a_rb" class="btn2 sm" onclick="otpResend()" disabled></button></div>
+   <button class="btn2 w-full mt-3" onclick="otpBack()">← ${em?'Change email':'Change number'} · বদলান</button>
+  </div>`;
+}
+function gdemoView(){
+  return `<div class="text-center mb-4"><div style="font-size:40px">${GLOGO.replace('width="20" height="20"','width="40" height="40"')}</div><h1 class="text-xl font-bold mt-2">Choose a Google account</h1></div>
+  <div class="card" style="padding:18px">
+   <div class="text-sm mb-2" style="background:var(--soft);color:var(--ac);padding:8px 10px;border-radius:8px">Demo mode – set <code>AUTH_CFG.googleClientId</code> to use real Google sign-in.</div>
+   <form onsubmit="return gdemoGo(event)" novalidate>
+    <label class="lbl mt-2">Name · নাম<input id="g_n" class="inp" autocomplete="name"></label>
+    <label class="lbl mt-2">Gmail<input id="g_e" type="email" class="inp" autocomplete="email" placeholder="you@gmail.com"></label>
+    <div id="a_err" class="aerr" role="alert"></div>
+    <button class="btn w-full" style="padding:11px">Continue</button>
+    <button type="button" class="btn2 w-full mt-2" onclick="au.step='form';authView()">Cancel</button>
+   </form></div>`;
+}
+
+/* ---------- sign-up / log-in submit ---------- */
+async function aSubmit(ev){
+  ev.preventDefault();aKeep();aErr('');
+  const su=au.mode==='signup',em=au.via==='email',v=au.v,name=v.name.trim();
+  if(Date.now()<au.lock)return aErr(`অনেকবার ভুল হয়েছে, ${Math.ceil((au.lock-Date.now())/1000)} সেকেন্ড পরে চেষ্টা করুন · Too many attempts`),false;
+  let id;
+  if(em){id=v.id.trim().toLowerCase();if(!okEmail(id))return aErr('সঠিক ইমেইল দিন · Enter a valid email'),false}
+  else{id=normPhone(v.id);if(!id)return aErr('সঠিক মোবাইল নম্বর দিন (01XXXXXXXXX) · Enter a valid mobile number'),false}
+  const fld=em?'email':'phone',ex=A.users.find(u=>u[fld]===id),btn=$('#a_go'),p=$('#a_pw').value;
+  btn.disabled=true;
+  try{
+    if(su){
+      if(name.length<2)return aErr('আপনার নাম লিখুন · Enter your name'),false;
+      if(p.length<8)return aErr('পাসওয়ার্ড কমপক্ষে ৮ অক্ষর · Password must be at least 8 characters'),false;
+      if(p!==$('#a_pw2').value)return aErr('পাসওয়ার্ড মিলছে না · Passwords do not match'),false;
+      if(ex)return aErr('এই '+(em?'ইমেইল':'নম্বর')+' দিয়ে অ্যাকাউন্ট আছে, লগইন করুন · Already registered – please log in'),false;
+      au.pend={type:'signup',user:{id:uid(),name,email:em?id:'',phone:em?'':id,pw:await mkPw(p),provider:'local',created:Date.now(),shop:(v.shop||'').trim(),v:2,first:A.users.length===0}};
+    }else{
+      if(ex&&!ex.pw&&ex.provider==='google')return aErr('এই অ্যাকাউন্ট Google দিয়ে খোলা – "Continue with Google" ব্যবহার করুন · This account uses Google sign-in'),false;
+      if(ex&&ex.pw){
+        if(!p)return aErr('পাসওয়ার্ড দিন · Enter your password'),false;
+        if(!(await chkPw(p,ex.pw))){aFail();return aErr('ভুল তথ্য · Wrong '+(em?'email':'mobile number')+' or password'),false}
+      }else if(!ex){aFail();return aErr('অ্যাকাউন্ট নেই বা ভুল তথ্য · No such account or wrong password – sign up if you are new'),false}
+      // (older accounts made without a password continue straight to the OTP step)
+      au.pend={type:'login',uid:ex.id};
+    }
+    au.fails=0;
+    await otpStart(id,em?'email':'sms');
+    au.step='otp';authView();
+  }catch(e){aErr('OTP পাঠানো যায়নি · Could not send OTP: '+(e&&e.message||e))}
+  finally{const b=$('#a_go');if(b)b.disabled=false}
+  return false;
+}
+
+/* ---------- OTP ---------- */
+async function otpStart(target,channel){
+  const code=String(crypto.getRandomValues(new Uint32Array(1))[0]%1000000).padStart(6,'0');
+  if(!AUTH_CFG.demo)await AUTH_CFG.sendOtp(target,code,channel);
+  OTP={code,target,channel,exp:Date.now()+AUTH_CFG.otpTtl*1000,tries:0,next:Date.now()+AUTH_CFG.resendSec*1000};
+}
+function otpBoxes(){return [...document.querySelectorAll('.otpb')]}
+function otpWire(){
+  const bx=otpBoxes();
+  const fill=(d,from)=>{for(let j=0;j<d.length&&from+j<6;j++)bx[from+j].value=d[j];bx[Math.min(from+d.length,5)].focus();otpAuto()};
+  bx.forEach((b,i)=>{
+    b.addEventListener('input',()=>{
+      const d=b.value.replace(/\D/g,'');b.classList.remove('bad');
+      if(d.length>1){b.value='';fill(d,i)}            // SMS autofill / multi-char input
+      else{b.value=d;if(d&&i<5)bx[i+1].focus();otpAuto()}
+    });
+    b.addEventListener('keydown',e=>{
+      if(e.key==='Backspace'&&!b.value&&i>0){bx[i-1].focus();bx[i-1].value=''}
+      else if(e.key==='ArrowLeft'&&i>0)bx[i-1].focus();
+      else if(e.key==='ArrowRight'&&i<5)bx[i+1].focus();
+      else if(e.key==='Enter')otpVerify();
+    });
+    b.addEventListener('paste',e=>{const d=((e.clipboardData||window.clipboardData).getData('text')||'').replace(/\D/g,'').slice(0,6);if(!d)return;e.preventDefault();bx.forEach(x=>x.value='');fill(d,0)});
+    b.addEventListener('focus',()=>b.select());
+  });
+  bx[0].focus();
+}
+function otpAuto(){if(otpBoxes().every(b=>b.value))otpVerify()}
+function otpTick(){
+  const b=$('#a_rb');if(!b||!OTP)return;
+  const upd=()=>{
+    const s=Math.max(0,Math.ceil((OTP.next-Date.now())/1000));
+    b.disabled=s>0;b.textContent=s>0?`Resend OTP in ${Math.floor(s/60)}:${pad(s%60)}`:'Resend OTP · আবার পাঠান';
+    if(s<=0)clearInterval(au.tm);
+  };
+  upd();au.tm=setInterval(upd,500);
+}
+async function otpResend(){
+  if(!OTP||Date.now()<OTP.next)return;
+  try{await otpStart(OTP.target,OTP.channel)}catch(e){aErr('OTP পাঠানো যায়নি · Could not send OTP');return}
+  authView();const e=$('#a_err');e.style.color='var(--ok)';e.textContent='নতুন OTP পাঠানো হয়েছে · New OTP sent';
+}
+function otpBack(){OTP=null;au.pend=null;au.step='form';authView()}
+function otpVerify(){
+  if(!OTP||!au.pend)return;
+  const bx=otpBoxes(),code=bx.map(b=>b.value).join('');
+  if(code.length<6)return aErr('৬ সংখ্যার কোড দিন · Enter the 6-digit code');
+  if(!OTP.code||Date.now()>OTP.exp)return aErr('কোডের মেয়াদ শেষ, আবার পাঠান · Code expired – resend OTP');
+  if(code!==OTP.code){
+    OTP.tries++;
+    if(OTP.tries>=AUTH_CFG.maxTries){OTP.code=null;aErr('অনেকবার ভুল, নতুন OTP নিন · Too many wrong tries – resend OTP')}
+    else aErr(`ভুল কোড · Wrong code (${AUTH_CFG.maxTries-OTP.tries} tries left)`);
+    bx.forEach(b=>{b.value='';b.classList.add('bad')});bx[0].focus();return;
+  }
+  const p=au.pend;let u;
+  if(p.type==='signup'){
+    const n=p.user;
+    if(A.users.some(x=>(n.email&&x.email===n.email)||(n.phone&&x.phone===n.phone))){otpBack();return aErr('অ্যাকাউন্ট আগেই আছে · Account already exists')}
+    n.verified=true;A.users.push(n);u=n;
+  }else u=A.users.find(x=>x.id===p.uid);
+  if(!u){otpBack();return aErr('অ্যাকাউন্ট পাওয়া যায়নি · Account not found')}
+  startSession(u);
+}
+
+/* ---------- Google sign-in ---------- */
+function gLoad(){return new Promise((res,rej)=>{
+  if(window.google&&google.accounts&&google.accounts.oauth2)return res();
+  const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;s.onload=res;s.onerror=()=>rej(new Error('load'));document.head.appendChild(s);
+})}
+async function gSign(){
+  if(!AUTH_CFG.googleClientId){au.step='gdemo';authView();return}
+  try{
+    await gLoad();
+    google.accounts.oauth2.initTokenClient({
+      client_id:AUTH_CFG.googleClientId,scope:'openid email profile',
+      callback:async r=>{
+        try{
+          if(r.error)throw new Error(r.error);
+          const p=await (await fetch('https://www.googleapis.com/oauth2/v3/userinfo',{headers:{Authorization:'Bearer '+r.access_token}})).json();
+          if(!p.email)throw new Error('no email');
+          gFinish(p.name,p.email);
+        }catch(e){aErr('Google সাইন-ইন হয়নি · Google sign-in failed')}
+      }
+    }).requestAccessToken();
+  }catch(e){aErr('Google লোড হয়নি – ইন্টারনেট ও Client ID দেখুন · Could not load Google sign-in')}
+}
+function gdemoGo(ev){
+  ev.preventDefault();
+  const n=$('#g_n').value.trim(),e=$('#g_e').value.trim().toLowerCase();
+  if(!n)return aErr('নাম লিখুন · Enter a name'),false;
+  if(!okEmail(e))return aErr('সঠিক ইমেইল দিন · Enter a valid email'),false;
+  gFinish(n,e);return false;
+}
+function gFinish(name,email){
+  email=email.toLowerCase();
+  let u=A.users.find(x=>x.email===email);
+  if(!u){u={id:uid(),name:name||email.split('@')[0],email,phone:'',pw:null,provider:'google',created:Date.now(),verified:true};A.users.push(u)}
+  startSession(u);
+}
+addEventListener('storage',e=>{if(e.key===AKEY){aLoad();const u=me();if((u?u.id:null)!==curUid)render()}});   // login/logout in another tab
+
+aLoad();au.mode=A.users.length?'login':'signup';
+render();
+</script>
+</body>
+</html>

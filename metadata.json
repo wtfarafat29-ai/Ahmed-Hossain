@@ -1,0 +1,6 @@
+{
+  "name": "দোকান হিসাব - Dokan Hisab & AI Photo Studio",
+  "description": "দোকানের সম্পূর্ণ বিক্রয়, পাইকারি মেমো, স্টক ট্র্যাকিং, লাভ-ক্ষতি হিসাব ও জেমিনি AI প্রডাক্ট ফটো স্টুডিও",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
